@@ -75,12 +75,12 @@ def main():
                 # рисуем прямоугольник описанный относительно контура
                 cv.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
 
-                print("x: %s, y: %s" % (x + (w/2), y + (h/2)))
+                print("x: %s, y: %s" % (x + (w // 2), y + (h // 2)))
                 # print("frame_center_cords:","x = ", len(frame[0])/2, "y = ", len(frame)/2)
 
                 # рисуем окружность в центре детектируемого прямоугольника
-                cv.circle(frame, (x + (w / 2), y + (h / 2)), 5, (0, 255, 0), thickness=2)
-                cv.circle(frame,(len(frame[0])/2, len(frame)/2),5, (0, 255, 0), thickness = 2)
+                cv.circle(frame, (x + (w // 2), y + (h // 2)), 5, (0, 255, 0), thickness=2)
+                cv.circle(frame,(len(frame[0]) // 2, len(frame) // 2),5, (0, 255, 0), thickness = 2)
 
                 if view_window_flag:
                     cv.imshow('Contours', frame)
