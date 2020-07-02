@@ -8,7 +8,7 @@ def nothing(x):
     pass
 
     #делаем захват видео с камеры в переменную cap
-cap = cv.VideoCapture("/dev/video2")    #stereo elp >> /dev/video2, /dev/video4
+cap = cv.VideoCapture("/dev/video0")    #stereo elp >> /dev/video2, /dev/video4
 
     #создам пустое окно с именем result
 cv.namedWindow('result')
@@ -22,13 +22,17 @@ cv.createTrackbar('maxb', 'result', 0, 255, nothing)
 cv.createTrackbar('maxg', 'result', 0, 255, nothing)
 cv.createTrackbar('maxr', 'result', 0, 255, nothing)
 
-#color = cv.imread('spectr.jpg')
-#cv.imshow('color', color)
+# color = cv.imread('spectr.jpg')
+# cv.imshow('color', color)
 
 while(True):
 
     #читаем флаг подключения камеры и картинку с камеры
     ret, frame = cap.read()
+
+    # ret = True
+    # frame = color
+
 
     #проверяем есть ли соединение с камерой
     if ret:
@@ -48,26 +52,26 @@ while(True):
 
         #делаем размытие картинки HSV
         hsv = cv.blur(hsv, (4,4))
-        cv.imshow('Blur', hsv)
+       # cv.imshow('Blur', hsv)
 
         #делаем бинаризацию картинки и пихаем её в переменную mask
         mask = cv.inRange(hsv, (minb, ming, minr), (maxb, maxg, maxr))
-        cv.imshow('mask', mask)
+       # cv.imshow('mask', mask)
 
-
+        # Уменьшаем контуры белых объектов - делаем две итерации
         maskEr = cv.erode(mask, None, iterations=2)
-        cv.imshow("Erode", maskEr)
+        # cv.imshow("Erode", maskEr)
 
-
+        # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем две итерации
         maskDi = cv.dilate(maskEr, None, iterations=2)
         cv.imshow('Dilate', maskDi)
 
-        #накладываем полученную маску на картинку с камеры переведённую в формат HSV
+        # накладываем полученную маску на картинку с камеры переведённую в формат HSV
         result = cv.bitwise_and(frame, frame, mask = mask)
         cv.imshow('result', result)
 
         #print(result)
-        if cv.waitKey(1) == 27: #проверяем была ли нажата кнопка esc
+        if cv.waitKey(1) == 27: # проверяем была ли нажата кнопка esc
             break
     else:
         print("Camera not found!")

@@ -4,20 +4,22 @@
 import cv2 as cv
 
 # задаем пороги цвета
-minb =
-ming =
-minr =
+minb = 6
+ming = 170
+minr = 131
 
-maxb =
-maxg =
-maxr =
+maxb = 84
+maxg = 255
+maxr = 255
+
+view_window_flag = True
 
     # делаем захват видео с камеры в переменную cap
-cap = cv.VideoCapture("/dev/video2")  # stereo elp >> /dev/video2, /dev/video4
+cap = cv.VideoCapture(0)  # stereo elp >> /dev/video2, /dev/video4
 
 while(True):
 
-    #читаем флаг подключения камеры и картинку с камеры
+    # читаем флаг подключения камеры и картинку с камеры
     ret, frame = cap.read()
     # print(frame)
     if ret:
@@ -28,29 +30,61 @@ while(True):
 
         # делаем размытие картинки HSV
         hsv = cv.blur(hsv, (4, 4))
-        cv.imshow('Blur', hsv)
+
+        if view_window_flag:
+            cv.imshow('Blur', hsv)
 
         # делаем бинаризацию картинки и пихаем её в переменную mask
         mask = cv.inRange(hsv, (minb, ming, minr), (maxb, maxg, maxr))
         #cv.imshow('mask', mask)
 
-        maskEr = cv.erode(mask, None, iterations=2)
-        #cv.imshow("Erode", maskEr)
+        # Уменьшаем контуры белых объектов - делаем две итерации
+        mask = cv.erode(mask, None, iterations=2)
+        #cv.imshow("Erode", mask)
 
-        maskDi = cv.dilate(maskEr, None, iterations=2)
-        cv.imshow('Dilate', maskDi)
+        # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем две итерации
+        mask = cv.dilate(mask, None, iterations=2)
+
+        if view_window_flag:
+            cv.imshow('Dilate', mask)
 
         # накладываем полученную маску на картинку с камеры переведённую в формат HSV
-        result = cv.bitwise_and(frame, frame, mask=mask)
-        cv.imshow('result', result)
+        result = cv.bitwise_and(frame, frame, mask = mask)
+
+        if view_window_flag:
+            cv.imshow('result', result)
+
+        # ищем контуры в результирующем кадре
+        contours = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+
+        # вычленяем массив контуров из переменной contours и переинициализируем переменную contours
+        contours = contours[1]
+
+        if contours:
+            # сортируем элементы массива контуров по площади по убыванию
+            contours = sorted(contours, key = cv.contourArea, reverse = True)
+            # выводим все контуры на изображении
+            cv.drawContours(frame, contours, -1, (0, 180, 255), 1)  #cv.drawContours(кадр, массив с контурами, индекс контура, цветовой диапазон контура, толщина контура)
+
+            # получаем координаты прямоугольника описанного относительно контура
+            (x, y, w, h) = cv.boundingRect(contours[0])
+            # рисуем прямоугольник описанный относительно контура
+            cv.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
+            print(x + (w/2)," ", y + (h/2))
+            if view_window_flag:
+                cv.imshow('Contours', frame)
+            print(len(contours))
+
+        else:
+            cv.destroyWindow('Contours')
 
         # print(result)
         if cv.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
             break
 
-        else:
-            print("Camera not found!")
-            break
+    else:
+        print("Camera not found!")
+        break
 
 
 cap.release()
