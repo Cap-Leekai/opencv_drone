@@ -8,7 +8,7 @@ def nothing(x):
     pass
 
     #делаем захват видео с камеры в переменную cap
-cap = cv.VideoCapture("/dev/video0")    #stereo elp >> /dev/video2, /dev/video4
+cap = cv.VideoCapture("/dev/video2")    #stereo elp >> /dev/video2, /dev/video4
 
     #создам пустое окно с именем result
 cv.namedWindow('result')
