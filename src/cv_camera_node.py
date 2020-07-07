@@ -10,10 +10,13 @@ from geometry_msgs.msg import PoseStamped, Pose
 from drone_msgs.msg import  Goal
 
 # задаем пороги цвета
-minBGR = (6, 170, 131)
-maxBGR = (84, 255, 255)
+minBGR = (0, 135, 100)
+maxBGR = (94, 255, 255)
 
-view_window_flag = False
+pointLandMin = (0, 0, 230)
+pointLandMax = (255, 255, 255)
+
+view_window_flag = True
 
 # переменные
 drone_alt = Float32
@@ -25,7 +28,7 @@ alt_topic = "/drone/alt"
 drone_pose_topic = "/mavros/local_position/pose"
 
 # делаем захват видео с камеры в переменную cap
-cap = cv.VideoCapture(0)  # stereo elp >> /dev/video2, /dev/video4
+cap = cv.VideoCapture("/dev/video0")  # stereo elp >> /dev/video2, /dev/video4
 
 # функция считывания текущего положения дрона
 def callbackDronePose(data):
@@ -37,17 +40,42 @@ def callbackDroneAlt(data):
     global drone_alt
     drone_alt = data
 
+# функция определения какой маркер обнаружен
+def detect_marker(cut_frame, origin_frame_bin):
+    similarity_val = 0
+    for i in range(64):
+        for j in range(64):
+            if cut_frame[i][j] == origin_frame_bin[i][j]:
+                similarity_val += 1
+    return(similarity_val)
+
+
 # функция вырезает детектируемый контур из кадра
 def cut_contour(frame, cords):
     print(cords)
-    cut_contour_frame = frame[cords[1]: (cords[1] + cords[3]), cords[0]: (cords[0] + cords[2])]
+    cut_contour_frame = frame[cords[1]: (cords[1] + cords[3]) + 1, cords[0]: (cords[0] + cords[2]) + 1]
+
+    # делаем фиксированный размер картинки 64 x 64
+    cut_contour_frame = cv.resize(cut_contour_frame, (64,64))
+    hsv_local = cv.cvtColor(cut_contour_frame, cv.COLOR_BGR2HSV)
+    cut_contour_frame = cv.inRange(hsv_local, minBGR, maxBGR)
     return cut_contour_frame
 
 # основная функция
 def main():
     
-    rospy.init_node('cv_camera_capture') #инициальизируем данную ноду с именем subscriber_node
-    
+    rospy.init_node('cv_camera_capture') # инициальизируем данную ноду с именем cv_camera_capture
+
+    # инициализируем все переменные хранящие маски детектируемых картинок из памяти
+    global point_land_mask
+
+    # считываем и бинаризуем все метки детектирования
+    point_land = cv.imread('point_land.jpg')
+    point_land_mask = cv.inRange(point_land, pointLandMin, pointLandMax)
+    point_land_mask = cv.resize(point_land_mask, (64, 64))
+    cv.imshow('cut_bin', point_land_mask)
+
+
     while(True):
 
         # читаем флаг подключения камеры и картинку с камеры
@@ -114,11 +142,12 @@ def main():
                 cv.circle(frame, (cords[0] + (cords[2] // 2), cords[1] + (cords[3] // 2)), 5, (0, 255, 0), thickness=2)
                 cv.circle(frame,(len(frame[0]) // 2, len(frame) // 2),5, (0, 255, 0), thickness = 2)
 
-                # if view_window_flag:
-                cv.imshow('Contours', frame)
-                cv.imshow('cut_contour', cut_contour(copy_frame, cords))
+                if view_window_flag:
+                    cv.imshow('Contours', frame)
+                    cv.imshow('cut_contour', cut_contour(copy_frame, cords))
 
-                print("Найдено контуров %s" %len(contours))
+                print("Найдено сходств %s" %detect_marker(cut_contour(copy_frame, cords), point_land_mask))
+
 
             else:
                 cv.destroyWindow('Contours')
@@ -133,6 +162,7 @@ def main():
             break
 
 if __name__ == "__main__":
+
 
     main()
     cap.release()
