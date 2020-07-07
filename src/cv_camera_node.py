@@ -7,14 +7,14 @@ import numpy as np
 
 from std_msgs.msg import Float32
 from geometry_msgs.msg import PoseStamped, Pose
-from drone_msgs.msg import  Goal
+from drone_msgs.msg import Goal
 
 # задаем пороги цвета
 minBGR = (0, 135, 100)
 maxBGR = (94, 255, 255)
 
-pointLandMin = (0, 0, 230)
-pointLandMax = (255, 255, 255)
+pointLandMin = (0, 121, 126)      #(0, 0, 230)
+pointLandMax = (255, 255, 255)  #(255, 255, 255)
 
 view_window_flag = True
 
@@ -28,7 +28,7 @@ alt_topic = "/drone/alt"
 drone_pose_topic = "/mavros/local_position/pose"
 
 # делаем захват видео с камеры в переменную cap
-cap = cv.VideoCapture("/dev/video0")  # stereo elp >> /dev/video2, /dev/video4
+cap = cv.VideoCapture("/dev/video2")  # stereo elp >> /dev/video2, /dev/video4
 
 # функция считывания текущего положения дрона
 def callbackDronePose(data):
@@ -80,12 +80,12 @@ def main():
 
         # читаем флаг подключения камеры и картинку с камеры
         ret, frame = cap.read()
-        # делаем копию кадра
-        copy_frame = frame.copy()
+
 
         # print(frame)
         if ret:
-
+            # делаем копию кадра
+            copy_frame = frame.copy()
             # переводим картинку с камеры из формата BGR в HSV
             hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
             #cv.imshow('frame', hsv)  # выводим картинку с камеры в формате HSV на экран
