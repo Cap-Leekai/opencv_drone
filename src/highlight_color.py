@@ -38,7 +38,8 @@ while(True):
     if ret:
 
         #переводим картинку с камеры из формата BGR в HSV
-        hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+        hsv = frame
+        # hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
         cv.imshow('frame', hsv) #выводим картинку с камеры в формате HSV на экран
 
         #получаем значения задаваемые бегунками
