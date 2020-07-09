@@ -4,7 +4,6 @@
 import rospy
 import cv2 as cv
 import numpy as np
-import copy
 
 
 from std_msgs.msg import Float32
