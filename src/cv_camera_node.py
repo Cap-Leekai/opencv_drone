@@ -10,25 +10,32 @@ from geometry_msgs.msg import PoseStamped, Pose
 from drone_msgs.msg import Goal
 
 # задаем пороги цвета
-minBGR = (0, 135, 100)
-maxBGR = (94, 255, 255)
+OrangeMinBGR = (0, 135, 100)
+OrangeMaxBGR = (94, 255, 255)
 
-pointLandMin = (0, 121, 126)      #(0, 0, 230)
-pointLandMax = (255, 255, 255)  #(255, 255, 255)
+GreenMinBGR = (45, 63, 0)
+GreenMaxBGR = (80, 255, 162)
 
-view_window_flag = True
+pointLandMinOrange = (0, 121, 126)      #(0, 0, 230)
+pointLandMaxOrange = (255, 255, 255)    #(255, 255, 255)
+
+pointLandMinGreen = (50, 0, 0)
+pointLandMaxGreen = (255, 255, 255)
+
+view_window_flag = False
 
 # переменные
 drone_alt = Float32
 drone_current_pose = Pose()
 goal_point = Goal()
+max_resize = (64, 64)
 
 # topics
 alt_topic = "/drone/alt"
 drone_pose_topic = "/mavros/local_position/pose"
 
 # делаем захват видео с камеры в переменную cap
-cap = cv.VideoCapture("/dev/video2")  # stereo elp >> /dev/video2, /dev/video4
+cap = cv.VideoCapture("/dev/video0")  # stereo elp >> /dev/video2, /dev/video4
 
 # функция считывания текущего положения дрона
 def callbackDronePose(data):
@@ -42,23 +49,26 @@ def callbackDroneAlt(data):
 
 # функция определения какой маркер обнаружен
 def detect_marker(cut_frame, origin_frame_bin):
+    difference_val = 0
     similarity_val = 0
     for i in range(64):
         for j in range(64):
             if cut_frame[i][j] == origin_frame_bin[i][j]:
                 similarity_val += 1
-    return(similarity_val)
+            elif cut_frame[i][j] != origin_frame_bin[i][j]:
+                difference_val += 1
+    return(similarity_val, difference_val)
 
 
 # функция вырезает детектируемый контур из кадра
-def cut_contour(frame, cords):
+def cut_contour(frame, cords, minVal, maxVal):
     print(cords)
     cut_contour_frame = frame[cords[1]: (cords[1] + cords[3]) + 1, cords[0]: (cords[0] + cords[2]) + 1]
 
     # делаем фиксированный размер картинки 64 x 64
-    cut_contour_frame = cv.resize(cut_contour_frame, (64,64))
+    cut_contour_frame = cv.resize(cut_contour_frame, max_resize)
     hsv_local = cv.cvtColor(cut_contour_frame, cv.COLOR_BGR2HSV)
-    cut_contour_frame = cv.inRange(hsv_local, minBGR, maxBGR)
+    cut_contour_frame = cv.inRange(hsv_local, minVal, maxVal)
     return cut_contour_frame
 
 # основная функция
@@ -67,13 +77,17 @@ def main():
     rospy.init_node('cv_camera_capture') # инициальизируем данную ноду с именем cv_camera_capture
 
     # инициализируем все переменные хранящие маски детектируемых картинок из памяти
-    global point_land_mask
+    global point_land_mask_orange, point_land_mask_green
 
     # считываем и бинаризуем все метки детектирования
     point_land = cv.imread('point_land.jpg')
-    point_land_mask = cv.inRange(point_land, pointLandMin, pointLandMax)
-    point_land_mask = cv.resize(point_land_mask, (64, 64))
-    cv.imshow('cut_bin', point_land_mask)
+    point_land_mask_orange = cv.inRange(point_land, pointLandMinOrange, pointLandMaxOrange)
+    point_land_mask_orange = cv.resize(point_land_mask_orange, max_resize)
+    cv.imshow('cut_bin_orange', point_land_mask_orange)
+
+    point_land_mask_green = cv.inRange(point_land, pointLandMinGreen, pointLandMaxGreen)
+    point_land_mask_green = cv.resize(point_land_mask_green, max_resize)
+    cv.imshow('cut_bin_green', point_land_mask_green)
 
 
     while(True):
@@ -97,7 +111,7 @@ def main():
                 cv.imshow('Blur', hsv)
 
             # делаем бинаризацию картинки и пихаем её в переменную mask
-            mask = cv.inRange(hsv, minBGR, maxBGR)
+            mask = cv.inRange(hsv, OrangeMinBGR, OrangeMaxBGR)
             #cv.imshow('mask', mask)
 
             # Уменьшаем контуры белых объектов - делаем две итерации
@@ -142,11 +156,11 @@ def main():
                 cv.circle(frame, (cords[0] + (cords[2] // 2), cords[1] + (cords[3] // 2)), 5, (0, 255, 0), thickness=2)
                 cv.circle(frame,(len(frame[0]) // 2, len(frame) // 2),5, (0, 255, 0), thickness = 2)
 
-                if view_window_flag:
-                    cv.imshow('Contours', frame)
-                    cv.imshow('cut_contour', cut_contour(copy_frame, cords))
+                # if view_window_flag:
+                cv.imshow('Contours', frame)
+                cv.imshow('cut_contour', cut_contour(copy_frame, cords, OrangeMinBGR, OrangeMaxBGR))
 
-                print("Найдено сходств %s" %detect_marker(cut_contour(copy_frame, cords), point_land_mask))
+                print("Найдено сходств %s, найдено различий %s" %detect_marker(cut_contour(copy_frame, cords, OrangeMinBGR, OrangeMaxBGR), point_land_mask_orange))
 
 
             else:
