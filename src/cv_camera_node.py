@@ -16,7 +16,7 @@ class contour_obj:
     # конструктор
     def __init__(self):
         self.name = None
-        self.frame = []
+        # self.frame = []
         self.cords = []
         self.mask = []
 
@@ -110,9 +110,8 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
     # создаём объект хранящий в себе основные параметры детектируемого объекта
     detect_obj = contour_obj()
 
-    detect_obj.frame = frame
     # переводим картинку с камеры из формата BGR в HSV
-    hsv = cv.cvtColor(detect_obj.frame, cv.COLOR_BGR2HSV)
+    hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
 
     # делаем размытие картинки HSV
     hsv = cv.blur(hsv, (4, 4))
@@ -129,16 +128,10 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
     # cv.imshow("Erode", mask)
 
     # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем две итерации
-    mask = cv.dilate(detect_obj.mask, None, iterations = 2)
+    detect_obj.mask = cv.dilate(detect_obj.mask, None, iterations = 2)
 
     if view_window_flag:
         cv.imshow('Dilate', detect_obj.mask)
-
-    # накладываем полученную маску на картинку с камеры переведённую в формат HSV
-    result = cv.bitwise_and(detect_obj.frame, detect_obj.frame, mask = detect_obj.mask)
-
-    if view_window_flag:
-        cv.imshow('result', result)
 
     # ищем контуры в результирующем кадре
     contours = cv.findContours(detect_obj.mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
@@ -151,20 +144,21 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
         # сортируем элементы массива контуров по площади по убыванию
         contours = sorted(contours, key = cv.contourArea, reverse = True)
         # выводим все контуры на изображении
-        cv.drawContours(detect_obj.frame, contours, -1, (0, 180, 255), 1)  # cv.drawContours(кадр, массив с контурами, индекс контура, цветовой диапазон контура, толщина контура)
+        # cv.drawContours(frame, contours, -1, (0, 180, 255), 1)  # cv.drawContours(кадр, массив с контурами, индекс контура, цветовой диапазон контура, толщина контура)
 
         # получаем координаты прямоугольника описанного относительно контура
         detect_obj.cords = cv.boundingRect(contours[0])  # возвращает кортеж в формате  (x, y, w, h)
 
-        # рисуем прямоугольник описанный относительно контура
-        cv.rectangle(frame, (detect_obj.cords[0], detect_obj.cords[1]), (detect_obj.cords[0] + detect_obj.cords[2], detect_obj.cords[1] + detect_obj.cords[3]), (0, 0, 255), 2)
-
         # print("x: %s, y: %s" % (detect_obj.cords[0] + (detect_obj.cords[2] // 2), detect_obj.cords[1] + (detect_obj.cords[3] // 2)))
         # print("frame_center_cords:","x = ", len(frame[0])/2, "y = ", len(frame)/2)
 
-        # рисуем окружность в центре детектируемого прямоугольника
-        cv.circle(detect_obj.frame, (detect_obj.cords[0] + (detect_obj.cords[2] // 2), detect_obj.cords[1] + (detect_obj.cords[3] // 2)), 5, (0, 255, 0), thickness = 2)
-        cv.circle(detect_obj.frame, (len(detect_obj.frame[0]) // 2, len(detect_obj.frame) // 2), 5, (0, 255, 0), thickness = 2)
+        # # рисуем прямоугольник описанный относительно контура
+        # cv.rectangle(frame, (detect_obj.cords[0], detect_obj.cords[1]),
+        #              (detect_obj.cords[0] + detect_obj.cords[2], detect_obj.cords[1] + detect_obj.cords[3]),
+        #              (0, 0, 255), 2)
+        # # рисуем окружность в центре детектируемого прямоугольника
+        # cv.circle(detect_obj.frame, (detect_obj.cords[0] + (detect_obj.cords[2] // 2), detect_obj.cords[1] + (detect_obj.cords[3] // 2)), 5, (0, 255, 0), thickness = 2)
+        # cv.circle(detect_obj.frame, (len(detect_obj.frame[0]) // 2, len(detect_obj.frame) // 2), 5, (0, 255, 0), thickness = 2)
 
         return detect_obj
 
@@ -204,7 +198,7 @@ def main():
 
             point_land_orange = contour_finder(frame, OrangeMinBGR, OrangeMaxBGR)
             print(point_land_orange.cords)
-
+            cv.imshow("point", point_land_orange.mask)
                 ##########################
 
             print("Orange Найдено сходств %s, найдено различий %s" %detect_marker(cut_contour(copy_frame, point_land_orange.cords, OrangeMinBGR, OrangeMaxBGR), point_land_mask_orange))
