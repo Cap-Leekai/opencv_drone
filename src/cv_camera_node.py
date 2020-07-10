@@ -21,20 +21,20 @@ class contour_obj:
 
 
 # задаем пороги цвета
-OrangeMinBGR = (0, 135, 100)
-OrangeMaxBGR = (94, 255, 255)
+OrangeMinBGR = (104, 104, 0)        # orange(0, 135, 100)
+OrangeMaxBGR = (255, 255, 255)       # orange(94, 255, 255)
 
 
-GreenMinBGR = (45, 63, 0)
-GreenMaxBGR = (80, 255, 162)
+GreenMinBGR = (44, 69, 0)           # (45, 63, 0)
+GreenMaxBGR = (80, 146, 255)        # (80, 255, 162)
 
 
-pointLandMinOrange = (0, 121, 126)      #(0, 0, 230)
-pointLandMaxOrange = (255, 255, 255)    #(255, 255, 255)
+pointLandMinOrange = (201, 0, 0)        # blue
+pointLandMaxOrange = (255, 10, 255)
 
 
-pointLandMinGreen = (0, 181, 0)
-pointLandMaxGreen = (255, 255, 255)
+pointLandMinGreen = (0, 146, 0)
+pointLandMaxGreen = (161, 255, 255)
 
 # флаги
 view_window_flag = False
@@ -89,7 +89,7 @@ def detect_marker(cut_frame, origin_frame_bin):
 # функция вырезает детектируемый контур из кадра и возвращает его в бинаризованном виде с фиксированным размером кадра
 def cut_contour(frame, cords, minVal, maxVal):
     try:
-        print(cords)
+        # print(cords)
         cut_contour_frame = frame[cords[1]: (cords[1] + cords[3]) + 1, cords[0]: (cords[0] + cords[2]) + 1]
 
         # делаем фиксированный размер картинки 64 x 64
@@ -132,7 +132,7 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
         cv.imshow('Dilate', detect_obj.mask)
 
     # ищем контуры в результирующем кадре
-    contours = cv.findContours(detect_obj.mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+    contours = cv.findContours(detect_obj.mask, cv.RETR_LIST , cv.CHAIN_APPROX_NONE)         # cv.RETR_TREE
 
     # вычленяем массив контуров из переменной contours и переинициализируем переменную contours
     contours = contours[1]
@@ -204,12 +204,13 @@ def main():
             if marker_orange[0] - marker_orange[1] > 2900 and marker_green[0] - marker_green[1] > 2900:
                 print("True marker of land")
                 landing_flag = True
+
             else:
                 print("False marker of land")
                 landing_flag = False
 
             # проверяем был ли обнаружен маркер посадки и если да, производим выполнение кода навигации
-            if landing_flag:
+            # if landing_flag:
 
                 ##########################
 
@@ -218,14 +219,32 @@ def main():
                     # ОТРЕДАКТИРОВАТЬ ИЛИ УДАЛИТЬ
                     #############################
 
-                # # рисуем прямоугольник описанный относительно контура
-                # cv.rectangle(frame, (detect_obj.cords[0], detect_obj.cords[1]),
-                #              (detect_obj.cords[0] + detect_obj.cords[2], detect_obj.cords[1] + detect_obj.cords[3]),
-                #              (0, 0, 255), 2)
-                # # рисуем окружность в центре детектируемого прямоугольника
-                # cv.circle(detect_obj.frame, (detect_obj.cords[0] + (detect_obj.cords[2] // 2), detect_obj.cords[1] + (detect_obj.cords[3] // 2)), 5, (0, 255, 0), thickness = 2)
-                # cv.circle(detect_obj.frame, (len(detect_obj.frame[0]) // 2, len(detect_obj.frame) // 2), 5, (0, 255, 0), thickness = 2)
+                # if point_land_orange.cords:
+                #     # рисуем прямоугольник описанный относительно контура
+                #     cv.rectangle(frame, (point_land_orange.cords[0], point_land_orange.cords[1]), (point_land_orange.cords[0] + point_land_orange.cords[2], point_land_orange.cords[1] + point_land_orange.cords[3]), (0, 0, 255), 2)
+                #
+                #     # рисуем окружность в центре детектируемого прямоугольника
+                #     cv.circle(frame, (point_land_orange.cords[0] + (point_land_orange.cords[2] // 2), point_land_orange.cords[1] + (point_land_orange.cords[3] // 2)), 5, (0, 255, 0), thickness = 2)
+                #     cv.circle(frame, (len(frame[0]) // 2, len(frame) // 2), 5, (0, 255, 0), thickness = 2)
+                #
+                #     cv.imshow("Pont_Orange", frame)
 
+                if point_land_green.cords:
+                    # рисуем прямоугольник описанный относительно контура
+                    cv.rectangle(point_land_green.mask,
+                                (point_land_green.cords[0], point_land_green.cords[1]),
+                                (point_land_green.cords[0] + point_land_green.cords[2], point_land_green.cords[1] + point_land_green.cords[3]),
+                                (255, 255, 255), 2)
+
+                    # рисуем окружность в центре детектируемого прямоугольника
+                    cv.circle(point_land_green.mask,
+                             (point_land_green.cords[0] + (point_land_green.cords[2] // 2),
+                              point_land_green.cords[1] + (point_land_green.cords[3] // 2)), 5, (255, 255, 255),thickness=2)
+
+                    cv.circle(point_land_green.mask,
+                              (len(frame[0]) // 2, len(frame) // 2), 5, (0, 255, 0), thickness=2)
+
+                    cv.imshow("Pont_Green", point_land_green.mask)
 
             if cv.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
                 break

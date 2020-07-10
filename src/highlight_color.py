@@ -22,24 +22,24 @@ cv.createTrackbar('maxb', 'result', 0, 255, nothing)
 cv.createTrackbar('maxg', 'result', 0, 255, nothing)
 cv.createTrackbar('maxr', 'result', 0, 255, nothing)
 
-color = cv.imread('point_land.jpg')
-cv.imshow('color', color)
+# color = cv.imread('land_point_blue.png')
+# cv.imshow('color', color)
 
 while(True):
 
     #читаем флаг подключения камеры и картинку с камеры
-    # ret, frame = cap.read()
+    ret, frame = cap.read()
 
-    ret = True
-    frame = color
+    # ret = True
+    # frame = color
 
 
     #проверяем есть ли соединение с камерой
     if ret:
 
         #переводим картинку с камеры из формата BGR в HSV
-        hsv = frame
-        # hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+        # hsv = frame
+        hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
         cv.imshow('frame', hsv) #выводим картинку с камеры в формате HSV на экран
 
         #получаем значения задаваемые бегунками
