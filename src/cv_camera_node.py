@@ -16,7 +16,6 @@ class contour_obj:
     # конструктор
     def __init__(self):
         self.name = None
-        # self.frame = []
         self.cords = []
         self.mask = []
 
@@ -37,7 +36,7 @@ pointLandMaxOrange = (255, 255, 255)    #(255, 255, 255)
 pointLandMinGreen = (0, 181, 0)
 pointLandMaxGreen = (255, 255, 255)
 
-
+# флаги
 view_window_flag = False
 
 
@@ -95,6 +94,7 @@ def cut_contour(frame, cords, minVal, maxVal):
 
         # делаем фиксированный размер картинки 64 x 64
         cut_contour_frame = cv.resize(cut_contour_frame, max_resize)
+
         hsv_local = cv.cvtColor(cut_contour_frame, cv.COLOR_BGR2HSV)
         cut_contour_frame = cv.inRange(hsv_local, minVal, maxVal)
 
@@ -175,7 +175,7 @@ def main():
     cv.imshow('cut_bin_green', point_land_mask_green)
 
 
-    while(True):
+    while not rospy.is_shutdown():
 
         # читаем флаг подключения камеры и картинку с камеры
         ret, frame = cap.read()
@@ -187,8 +187,26 @@ def main():
                 ##########################
 
             point_land_orange = contour_finder(frame, OrangeMinBGR, OrangeMaxBGR)
-            print(point_land_orange.cords)
-            cv.imshow("point", point_land_orange.mask)
+            # print(point_land_orange.cords)
+            cv.imshow("point_orange", point_land_orange.mask)
+
+            point_land_green = contour_finder(frame, GreenMinBGR, GreenMaxBGR)
+            # print(point_land_green.cords)
+            cv.imshow("point_green", point_land_green.mask)
+
+            marker_orange = detect_marker(cut_contour(copy_frame, point_land_orange.cords, OrangeMinBGR, OrangeMaxBGR), point_land_mask_orange)
+            marker_green = detect_marker(cut_contour(copy_frame, point_land_orange.cords, GreenMinBGR, GreenMaxBGR), point_land_mask_green)
+
+            print("Orange Найдено сходств %s, найдено различий %s" % marker_orange)
+            print("Green Найдено сходств %s, найдено различий %s" %  marker_green )
+
+            if marker_orange[0] - marker_orange[1] > 3000 and marker_green[0] - marker_green[1] > 3000:
+                print("True marker of land")
+
+            else:
+                print("False marker of land")
+
+
                 ##########################
 
 
@@ -203,10 +221,6 @@ def main():
                 # # рисуем окружность в центре детектируемого прямоугольника
                 # cv.circle(detect_obj.frame, (detect_obj.cords[0] + (detect_obj.cords[2] // 2), detect_obj.cords[1] + (detect_obj.cords[3] // 2)), 5, (0, 255, 0), thickness = 2)
                 # cv.circle(detect_obj.frame, (len(detect_obj.frame[0]) // 2, len(detect_obj.frame) // 2), 5, (0, 255, 0), thickness = 2)
-
-
-            print("Orange Найдено сходств %s, найдено различий %s" %detect_marker(cut_contour(copy_frame, point_land_orange.cords, OrangeMinBGR, OrangeMaxBGR), point_land_mask_orange))
-            # print("Green Найдено сходств %s, найдено различий %s" % detect_marker(cut_contour(copy_frame, point_land_orange.cords, GreenMinBGR, GreenMaxBGR), point_land_mask_green))
 
 
             if cv.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
