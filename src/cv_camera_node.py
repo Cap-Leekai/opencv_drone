@@ -73,9 +73,7 @@ def callbackDroneAlt(data):
 def detect_marker(cut_frame, origin_frame_bin):
     difference_val = 0
     similarity_val = 0
-
     try:
-
         for i in range(64):
             for j in range(64):
                 if cut_frame[i][j] == origin_frame_bin[i][j]:
@@ -86,7 +84,7 @@ def detect_marker(cut_frame, origin_frame_bin):
         similarity_val = 0
         difference_val = 0
 
-    return(similarity_val, difference_val)
+    return similarity_val, difference_val
 
 
 # функция вырезает детектируемый контур из кадра и возвращает его в бинаризованном виде с фиксированным размером кадра
@@ -152,14 +150,6 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
         # print("x: %s, y: %s" % (detect_obj.cords[0] + (detect_obj.cords[2] // 2), detect_obj.cords[1] + (detect_obj.cords[3] // 2)))
         # print("frame_center_cords:","x = ", len(frame[0])/2, "y = ", len(frame)/2)
 
-        # # рисуем прямоугольник описанный относительно контура
-        # cv.rectangle(frame, (detect_obj.cords[0], detect_obj.cords[1]),
-        #              (detect_obj.cords[0] + detect_obj.cords[2], detect_obj.cords[1] + detect_obj.cords[3]),
-        #              (0, 0, 255), 2)
-        # # рисуем окружность в центре детектируемого прямоугольника
-        # cv.circle(detect_obj.frame, (detect_obj.cords[0] + (detect_obj.cords[2] // 2), detect_obj.cords[1] + (detect_obj.cords[3] // 2)), 5, (0, 255, 0), thickness = 2)
-        # cv.circle(detect_obj.frame, (len(detect_obj.frame[0]) // 2, len(detect_obj.frame) // 2), 5, (0, 255, 0), thickness = 2)
-
         return detect_obj
 
     else:
@@ -200,6 +190,20 @@ def main():
             print(point_land_orange.cords)
             cv.imshow("point", point_land_orange.mask)
                 ##########################
+
+
+                    #############################
+                    # ОТРЕДАКТИРОВАТЬ ИЛИ УДАЛИТЬ
+                    #############################
+
+                # # рисуем прямоугольник описанный относительно контура
+                # cv.rectangle(frame, (detect_obj.cords[0], detect_obj.cords[1]),
+                #              (detect_obj.cords[0] + detect_obj.cords[2], detect_obj.cords[1] + detect_obj.cords[3]),
+                #              (0, 0, 255), 2)
+                # # рисуем окружность в центре детектируемого прямоугольника
+                # cv.circle(detect_obj.frame, (detect_obj.cords[0] + (detect_obj.cords[2] // 2), detect_obj.cords[1] + (detect_obj.cords[3] // 2)), 5, (0, 255, 0), thickness = 2)
+                # cv.circle(detect_obj.frame, (len(detect_obj.frame[0]) // 2, len(detect_obj.frame) // 2), 5, (0, 255, 0), thickness = 2)
+
 
             print("Orange Найдено сходств %s, найдено различий %s" %detect_marker(cut_contour(copy_frame, point_land_orange.cords, OrangeMinBGR, OrangeMaxBGR), point_land_mask_orange))
             # print("Green Найдено сходств %s, найдено различий %s" % detect_marker(cut_contour(copy_frame, point_land_orange.cords, GreenMinBGR, GreenMaxBGR), point_land_mask_green))
