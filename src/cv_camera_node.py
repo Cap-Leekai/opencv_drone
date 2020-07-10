@@ -38,7 +38,7 @@ pointLandMaxGreen = (255, 255, 255)
 
 # флаги
 view_window_flag = False
-
+landing_flag = False
 
 # переменные
 drone_alt = Float32
@@ -122,11 +122,11 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
     # cv.imshow('mask', mask)
 
     # Уменьшаем контуры белых объектов - делаем две итерации
-    detect_obj.mask = cv.erode(detect_obj.mask, None, iterations = 2)
+    detect_obj.mask = cv.erode(detect_obj.mask, None, iterations = 3)
     # cv.imshow("Erode", mask)
 
     # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем две итерации
-    detect_obj.mask = cv.dilate(detect_obj.mask, None, iterations = 2)
+    detect_obj.mask = cv.dilate(detect_obj.mask, None, iterations = 3)
 
     if view_window_flag:
         cv.imshow('Dilate', detect_obj.mask)
@@ -166,6 +166,7 @@ def main():
 
     # считываем и бинаризуем все метки детектирования
     point_land = cv.imread('point_land.jpg')
+
     point_land_mask_orange = cv.inRange(point_land, pointLandMinOrange, pointLandMaxOrange)
     point_land_mask_orange = cv.resize(point_land_mask_orange, max_resize)
     cv.imshow('cut_bin_orange', point_land_mask_orange)
@@ -182,7 +183,6 @@ def main():
         # делаем копию кадра
         copy_frame = frame.copy()
 
-        # print(frame)
         if ret:
                 ##########################
 
@@ -197,15 +197,19 @@ def main():
             marker_orange = detect_marker(cut_contour(copy_frame, point_land_orange.cords, OrangeMinBGR, OrangeMaxBGR), point_land_mask_orange)
             marker_green = detect_marker(cut_contour(copy_frame, point_land_orange.cords, GreenMinBGR, GreenMaxBGR), point_land_mask_green)
 
-            print("Orange Найдено сходств %s, найдено различий %s" % marker_orange)
-            print("Green Найдено сходств %s, найдено различий %s" %  marker_green )
+            # print("Orange Найдено сходств %s, найдено различий %s" % marker_orange)
+            # print("Green Найдено сходств %s, найдено различий %s" %  marker_green )
 
-            if marker_orange[0] - marker_orange[1] > 3000 and marker_green[0] - marker_green[1] > 3000:
+            # проверяем сходство масок детектырованных и масок картинок зашитых в файл с проктом
+            if marker_orange[0] - marker_orange[1] > 2900 and marker_green[0] - marker_green[1] > 2900:
                 print("True marker of land")
-
+                landing_flag = True
             else:
                 print("False marker of land")
+                landing_flag = False
 
+            # проверяем был ли обнаружен маркер посадки и если да, производим выполнение кода навигации
+            if landing_flag:
 
                 ##########################
 
