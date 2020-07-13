@@ -4,7 +4,8 @@
 import rospy
 import cv2 as cv
 import numpy as np
-
+import math
+import tf
 
 from std_msgs.msg import Float32
 from geometry_msgs.msg import PoseStamped, Pose
@@ -21,20 +22,20 @@ class contour_obj:
 
 
 # задаем пороги цвета
-OrangeMinBGR = (104, 104, 0)        # orange(0, 135, 100)
-OrangeMaxBGR = (255, 255, 255)       # orange(94, 255, 255)
+BLUE_MIN_BGR = (104, 104, 0)        # orange(0, 135, 100)
+BLUE_MAX_BGR = (255, 255, 255)       # orange(94, 255, 255)
 
 
-GreenMinBGR = (44, 69, 0)           # (45, 63, 0)
-GreenMaxBGR = (80, 146, 255)        # (80, 255, 162)
+GREEN_MIN_BGR = (44, 69, 0)           # (45, 63, 0)
+GREEN_MAX_BGR = (80, 146, 255)        # (80, 255, 162)
 
 
-pointLandMinOrange = (201, 0, 0)        # blue
-pointLandMaxOrange = (255, 10, 255)
+POINT_LAND_MIN_BLUE = (201, 0, 0)        # blue
+POINT_LAND_MAX_BLUE = (255, 10, 255)
 
 
-pointLandMinGreen = (0, 146, 0)
-pointLandMaxGreen = (161, 255, 255)
+POINT_LAND_MIN_GREEN = (0, 146, 0)
+POINT_LAND_MAX_GREEN = (161, 255, 255)
 
 # флаги
 view_window_flag = False
@@ -42,7 +43,7 @@ landing_flag = False
 
 # переменные
 drone_alt = Float32
-drone_current_pose = Pose()
+drone_pose = PoseStamped()
 goal_point = Goal()
 max_resize = (64, 64)
 
@@ -50,22 +51,16 @@ max_resize = (64, 64)
 # topics
 alt_topic = "/drone/alt"
 drone_pose_topic = "/mavros/local_position/pose"
-
+drone_goal_pose = "/goal_pose"
 
 # делаем захват видео с камеры в переменную cap
 cap = cv.VideoCapture("/dev/video0")  # stereo elp >> /dev/video2, /dev/video4
 
 
 # функция считывания текущего положения дрона
-def callbackDronePose(data):
+def call_back_Drone_Pose(data):
     global drone_pose
     drone_pose = data
-
-
-# функция приёма высоты
-def callbackDroneAlt(data):
-    global drone_alt
-    drone_alt = data
 
 
 # функция определения какой маркер обнаружен
@@ -97,6 +92,7 @@ def cut_contour(frame, cords, minVal, maxVal):
 
         hsv_local = cv.cvtColor(cut_contour_frame, cv.COLOR_BGR2HSV)
         cut_contour_frame = cv.inRange(hsv_local, minVal, maxVal)
+
 
     except:
         cut_contour_frame = None
@@ -132,7 +128,7 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
         cv.imshow('Dilate', detect_obj.mask)
 
     # ищем контуры в результирующем кадре
-    contours = cv.findContours(detect_obj.mask, cv.RETR_LIST , cv.CHAIN_APPROX_NONE)         # cv.RETR_TREE
+    contours = cv.findContours(detect_obj.mask, cv.RETR_TREE , cv.CHAIN_APPROX_NONE)         # cv.RETR_TREE
 
     # вычленяем массив контуров из переменной contours и переинициализируем переменную contours
     contours = contours[1]
@@ -161,47 +157,66 @@ def main():
     
     rospy.init_node('cv_camera_capture') # инициальизируем данную ноду с именем cv_camera_capture
 
+    # инициализируем подписку на топик
+    rospy.Subscriber("/mavros/local_position/pose", Pose, call_back_Drone_Pose)
+
+    goal_pose_pub = rospy.Publisher("/goal_pose", Goal, queue_size=10)
+
+    hz = rospy.Rate(5)
     # инициализируем все переменные хранящие маски детектируемых картинок из памяти
-    global point_land_mask_orange, point_land_mask_green
+    global point_land_mask_blue, point_land_mask_green
 
     # считываем и бинаризуем все метки детектирования
-    point_land = cv.imread('point_land.jpg')
+    point_land = cv.imread('land_point_blue.png')
 
-    point_land_mask_orange = cv.inRange(point_land, pointLandMinOrange, pointLandMaxOrange)
-    point_land_mask_orange = cv.resize(point_land_mask_orange, max_resize)
-    cv.imshow('cut_bin_orange', point_land_mask_orange)
+    point_land_mask_blue = cv.inRange(point_land, POINT_LAND_MIN_BLUE, POINT_LAND_MAX_BLUE)
+    # ДОПИСАТЬ ПЕРЕСЧЕТ ПО КОНТУРУ
+    point_land_mask_blue = cv.resize(point_land_mask_blue, max_resize)
+    cv.imshow('cut_bin_blue', point_land_mask_blue)
 
-    point_land_mask_green = cv.inRange(point_land, pointLandMinGreen, pointLandMaxGreen)
+
+    point_land_mask_green = cv.inRange(point_land, POINT_LAND_MIN_GREEN, POINT_LAND_MAX_GREEN)
+    # ДОПИСАТЬ ПЕРЕСЧЕТ ПО КОНТУРУ
     point_land_mask_green = cv.resize(point_land_mask_green, max_resize)
     cv.imshow('cut_bin_green', point_land_mask_green)
 
 
     while not rospy.is_shutdown():
 
+
         # читаем флаг подключения камеры и картинку с камеры
         ret, frame = cap.read()
         # делаем копию кадра
         copy_frame = frame.copy()
 
+
         if ret:
                 ##########################
 
-            point_land_orange = contour_finder(frame, OrangeMinBGR, OrangeMaxBGR)
-            # print(point_land_orange.cords)
-            cv.imshow("point_orange", point_land_orange.mask)
+            # получаем бъект контура по указанному интервалу цвета
+            point_land_blue = contour_finder(frame, BLUE_MIN_BGR, BLUE_MAX_BGR)
+            # print(point_land_blue.cords)
+            cv.imshow("point_blue", point_land_blue.mask)
 
-            point_land_green = contour_finder(frame, GreenMinBGR, GreenMaxBGR)
+            # получаем бъект контура по указанному интервалу цвета
+            point_land_green = contour_finder(frame, GREEN_MIN_BGR, GREEN_MAX_BGR)
             # print(point_land_green.cords)
             cv.imshow("point_green", point_land_green.mask)
 
-            marker_orange = detect_marker(cut_contour(copy_frame, point_land_orange.cords, OrangeMinBGR, OrangeMaxBGR), point_land_mask_orange)
-            marker_green = detect_marker(cut_contour(copy_frame, point_land_orange.cords, GreenMinBGR, GreenMaxBGR), point_land_mask_green)
 
-            # print("Orange Найдено сходств %s, найдено различий %s" % marker_orange)
+            # сравниваем маски с камеры и маску сделанную из файлов
+            marker_blue = detect_marker(cut_contour(copy_frame, point_land_blue.cords, BLUE_MIN_BGR, BLUE_MAX_BGR),
+                                        point_land_mask_blue)
+            marker_green = detect_marker(cut_contour(copy_frame, point_land_blue.cords, GREEN_MIN_BGR, GREEN_MAX_BGR),
+                                        point_land_mask_green)
+
+
+            # print("BLUE Найдено сходств %s, найдено различий %s" % marker_blue)
             # print("Green Найдено сходств %s, найдено различий %s" %  marker_green )
 
-            # проверяем сходство масок детектырованных и масок картинок зашитых в файл с проктом
-            if marker_orange[0] - marker_orange[1] > 2900 and marker_green[0] - marker_green[1] > 2900:
+
+            # проверяем сходство детектырованных масок и масок картинок зашитых в файл с проектом
+            if marker_blue[0] - marker_blue[1] > 2900 and marker_green[0] - marker_green[1] > 2900:
                 print("True marker of land")
                 landing_flag = True
 
@@ -209,45 +224,56 @@ def main():
                 print("False marker of land")
                 landing_flag = False
 
+
             # проверяем был ли обнаружен маркер посадки и если да, производим выполнение кода навигации
-            # if landing_flag:
+            if landing_flag:
+                print("LANDING!")
+
+                frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+                # print("X: ", (point_land_green.cords[0] + (point_land_green.cords[2] // 2), "Y: ",
+                #               point_land_green.cords[1] + (point_land_green.cords[3] // 2)))  # возвращает кортеж в формате  (x, y, w, h)
+
+                # вычисляем локальные координаты относительно дрона(измерение в пиксельных единицах!!!!)
+                local_X = (point_land_green.cords[0] + (point_land_green.cords[2] // 2)) - len(frame[0]) // 2
+                local_Y = - ((point_land_green.cords[1] + (point_land_green.cords[3] // 2)) - len(frame) // 2)
+
+                angular = math.atan2(local_Y, local_X)
+                # print("ANGULAR = ", angular)
+                # print("local_X = %s local_Y = %s"  %(local_X, local_Y))
+                # cv.imshow("transform_matrix", frame_gray)
+
+                # drone_current_angular = tf.transformations.euler_from_quaternion(drone_pose.pose.orientation)
+                # goal_point.pose.course = drone_current_angular - (math.pi/2 - angular)
 
                 ##########################
 
 
-                    #############################
-                    # ОТРЕДАКТИРОВАТЬ ИЛИ УДАЛИТЬ
-                    #############################
-
-                # if point_land_orange.cords:
-                #     # рисуем прямоугольник описанный относительно контура
-                #     cv.rectangle(frame, (point_land_orange.cords[0], point_land_orange.cords[1]), (point_land_orange.cords[0] + point_land_orange.cords[2], point_land_orange.cords[1] + point_land_orange.cords[3]), (0, 0, 255), 2)
-                #
-                #     # рисуем окружность в центре детектируемого прямоугольника
-                #     cv.circle(frame, (point_land_orange.cords[0] + (point_land_orange.cords[2] // 2), point_land_orange.cords[1] + (point_land_orange.cords[3] // 2)), 5, (0, 255, 0), thickness = 2)
-                #     cv.circle(frame, (len(frame[0]) // 2, len(frame) // 2), 5, (0, 255, 0), thickness = 2)
-                #
-                #     cv.imshow("Pont_Orange", frame)
-
-                if point_land_green.cords:
+                if point_land_blue.cords:
                     # рисуем прямоугольник описанный относительно контура
-                    cv.rectangle(point_land_green.mask,
+                    cv.rectangle(frame,
                                 (point_land_green.cords[0], point_land_green.cords[1]),
                                 (point_land_green.cords[0] + point_land_green.cords[2], point_land_green.cords[1] + point_land_green.cords[3]),
-                                (255, 255, 255), 2)
+                                (0, 255, 0), 2)
 
                     # рисуем окружность в центре детектируемого прямоугольника
-                    cv.circle(point_land_green.mask,
+                    cv.circle(frame,
                              (point_land_green.cords[0] + (point_land_green.cords[2] // 2),
-                              point_land_green.cords[1] + (point_land_green.cords[3] // 2)), 5, (255, 255, 255),thickness=2)
+                              point_land_green.cords[1] + (point_land_green.cords[3] // 2)), 5, (0, 255, 0),thickness=2)
 
-                    cv.circle(point_land_green.mask,
+                    cv.circle(frame,
                               (len(frame[0]) // 2, len(frame) // 2), 5, (0, 255, 0), thickness=2)
 
-                    cv.imshow("Pont_Green", point_land_green.mask)
+                    cv.imshow("Pontsy", frame)
+
+
+
+                else:
+                    cv.destroyWindow("Pontsy")
 
             if cv.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
                 break
+
+            hz.sleep()
 
         else:
             print("Camera not found!")
