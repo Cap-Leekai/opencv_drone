@@ -48,6 +48,7 @@ goal_point = Goal()
 max_resize = (64, 64)
 
 
+
 # topics
 alt_topic = "/drone/alt"
 drone_pose_topic = "/mavros/local_position/pose"
@@ -62,6 +63,18 @@ def call_back_Drone_Pose(data):
     global drone_pose
     drone_pose = data
 
+def call_back_Drone_Alt(data):
+    global drone_alt
+    drone_alt = data
+
+def transform_cord(W, cords):
+
+    matrix_transform = np.array([math.cos(W), math.sin(W)],
+                                [-math.sin(W), math.cos(W)])
+    glob_cords = np.dot(cords, matrix_transform)
+    X = glob_cords[0]
+    y = glob_cords[1]
+    return X, Y
 
 # функция определения какой маркер обнаружен
 def detect_marker(cut_frame, origin_frame_bin):
@@ -159,6 +172,7 @@ def main():
 
     # инициализируем подписку на топик
     rospy.Subscriber("/mavros/local_position/pose", Pose, call_back_Drone_Pose)
+    rospy.Subscriber("/drone/alt", Float32, call_back_Drone_Alt)
 
     goal_pose_pub = rospy.Publisher("/goal_pose", Goal, queue_size=10)
 
@@ -234,15 +248,27 @@ def main():
                 #               point_land_green.cords[1] + (point_land_green.cords[3] // 2)))  # возвращает кортеж в формате  (x, y, w, h)
 
                 # вычисляем локальные координаты относительно дрона(измерение в пиксельных единицах!!!!)
-                local_X = (point_land_green.cords[0] + (point_land_green.cords[2] // 2)) - len(frame[0]) // 2
-                local_Y = - ((point_land_green.cords[1] + (point_land_green.cords[3] // 2)) - len(frame) // 2)
+                X = (point_land_green.cords[0] + (point_land_green.cords[2] // 2)) - len(frame[0]) // 2
+                Y = - ((point_land_green.cords[1] + (point_land_green.cords[3] // 2)) - len(frame) // 2)
 
-                angular = math.atan2(local_Y, local_X)
+                glob_transform_cords = np.array[math.tan((21.8 / 320) * (math.pi / 180) * X)  * drone_alt, math.tan((16.1 / 240) * (math.pi / 180) * Y) * drone_alt]
+
+                drone_current_angular = tf.transformations.euler_from_quaternion(drone_pose.pose.orientation)
+
+                glob_X, glob_Y = transform_cord(drone_current_angular, glob_transform_cords)
+
+                goal_point.pose.course = drone_current_angular
+                goal_point.pose.point.x = glob_X
+                goal_point.pose.point.y = glob_Y
+
+                goal_pose_pub.publish(drone_goal_pose)
+
+                # angular = math.atan2(local_Y, local_X)
                 # print("ANGULAR = ", angular)
-                # print("local_X = %s local_Y = %s"  %(local_X, local_Y))
+                print("local_X = %s local_Y = %s"  %(local_X, local_Y))
                 # cv.imshow("transform_matrix", frame_gray)
 
-                # drone_current_angular = tf.transformations.euler_from_quaternion(drone_pose.pose.orientation)
+                #
                 # goal_point.pose.course = drone_current_angular - (math.pi/2 - angular)
 
                 ##########################
@@ -263,12 +289,12 @@ def main():
                     cv.circle(frame,
                               (len(frame[0]) // 2, len(frame) // 2), 5, (0, 255, 0), thickness=2)
 
-                    cv.imshow("Pontsy", frame)
+                    cv.imshow("Pointsy", frame)
 
 
 
                 else:
-                    cv.destroyWindow("Pontsy")
+                    cv.destroyWindow("Pointsy")
 
             if cv.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
                 break
