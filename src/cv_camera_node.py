@@ -84,13 +84,15 @@ def call_back_Drone_Alt(data):
 def transform_cord(W, cords):
 
     # матрица преобразования
-    matrix_transform = np.array([[math.cos(W), -math.sin(W), 0.0, math.cos(W) * drone_pose.pose.position.x + math.sin(W) * drone_pose.pose.position.y],
-                                [math.sin(W),  math.cos(W), 0.0,-math.sin(W) * drone_pose.pose.position.x + math.cos(W) * drone_pose.pose.position.y],
-                                [0.0, 0.0, 1.0, 0.0]])
-    
-    glob_cords = np.dot(cords, matrix_transform)
-    X = glob_cords[0]
-    Y = glob_cords[1]
+    # matrix_transform = np.array([[math.cos(W), -math.sin(W), 0.0, math.cos(W) * drone_pose.pose.position.x + math.sin(W) * drone_pose.pose.position.y],
+    #                              [math.sin(W),  math.cos(W), 0.0,-math.sin(W) * drone_pose.pose.position.x + math.cos(W) * drone_pose.pose.position.y],
+    #                              [0.0, 0.0, 1.0, 0.0]])
+
+    X = (math.cos(W) * (drone_pose.pose.position.x * math.cos(W) + drone_pose.pose.position.y * math.sin(W))) + (math.sin(W) * (drone_pose.pose.position.x * math.sin(W) - drone_pose.pose.position.y * math.cos(W))) + (cords[0] * math.cos(W) - cords[1] * math.sin(W))
+    Y = (math.sin(W) * (drone_pose.pose.position.x * math.cos(W) + drone_pose.pose.position.y * math.sin(W))) - (math.cos(W) * (drone_pose.pose.position.x * math.sin(W) - drone_pose.pose.position.y * math.cos(W))) + (cords[0] * math.sin(W) + cords[1] * math.cos(W))
+    # glob_cords = np.dot(cords, matrix_transform)
+    # X = glob_cords[0]
+    # Y = glob_cords[1]
     return X, Y
 
 
