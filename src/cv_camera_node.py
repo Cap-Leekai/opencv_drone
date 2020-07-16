@@ -284,17 +284,12 @@ def main():
                		 # считаем локальные координаты точки посадки в метрах(значения 21.8 и 16.1 это есть углы обзора камеры найденные экспериментальным путем)
                 	glob_transform_cords = np.array([math.tan((21.8 / 320.0) * (math.pi / 180.0) * float(X)) * drone_alt, math.tan((16.1 / 240.0) * (math.pi / 180.0) * float(Y)) * drone_alt, 0.0])
                
-<<<<<<< HEAD
-                	# считаем углы поворота дрона из кватерниона в углы эйлера
-                	(roll,pitch,yaw) = tf.transformations.euler_from_quaternion(quaternion)
-=======
-                # считаем углы поворота дрона из кватерниона в углы эйлера
-                (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
+
+                	 # считаем углы поворота дрона из кватерниона в углы эйлера
+                    (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
                 
-                glob_X, glob_Y = transform_cord(yaw, glob_transform_cords)  # пересчитываем найденные локальные координаты в глобальные
->>>>>>> 4950c2cfc62769bd61cae8af3f77012e7a61d685
-                
-                	glob_X, glob_Y = transform_cord(yaw, glob_transform_cords)  # пересчитываем найденные локальные координаты в глобальные
+
+                    glob_X, glob_Y = transform_cord(yaw, glob_transform_cords)  # пересчитываем найденные локальные координаты в глобальные
                 	print ("ALT = %s" %drone_alt)
                 	print ("X = %s, Y = %s" %(glob_X, glob_Y))
                 	goal_point.pose.course = yaw
@@ -302,8 +297,8 @@ def main():
                 	goal_point.pose.point.y = glob_Y
 
                 	goal_pose_pub.publish(goal_point)
-		except: 
-			print("LOL! Fail!")
+                except:
+                    print("LOL! Fail!")
                                  
              
                 # if point_land_blue.cords:
