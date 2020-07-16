@@ -90,6 +90,7 @@ def transform_cord(W, cords):
 
     X = (math.cos(W) * (drone_pose.pose.position.x * math.cos(W) + drone_pose.pose.position.y * math.sin(W))) + (math.sin(W) * (drone_pose.pose.position.x * math.sin(W) - drone_pose.pose.position.y * math.cos(W))) + (cords[0] * math.cos(W) - cords[1] * math.sin(W))
     Y = (math.sin(W) * (drone_pose.pose.position.x * math.cos(W) + drone_pose.pose.position.y * math.sin(W))) - (math.cos(W) * (drone_pose.pose.position.x * math.sin(W) - drone_pose.pose.position.y * math.cos(W))) + (cords[0] * math.sin(W) + cords[1] * math.cos(W))
+    print (W, X, Y)
     # glob_cords = np.dot(cords, matrix_transform)
     # X = glob_cords[0]
     # Y = glob_cords[1]
@@ -286,7 +287,7 @@ def main():
                 glob_transform_cords = np.array([math.tan((21.8 / 320.0) * (math.pi / 180.0) * float(X)) * drone_alt, math.tan((16.1 / 240.0) * (math.pi / 180.0) * float(Y)) * drone_alt, 0.0])
                
                 # считаем углы поворота дрона из кватерниона в углы эйлера
-                (roll,pitch,yaw) = tf.transformations.euler_from_quaternion(quaternion)
+                (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
                 
                 glob_X, glob_Y = transform_cord(yaw, glob_transform_cords)  # пересчитываем найденные локальные координаты в глобальные
                 
