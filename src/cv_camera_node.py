@@ -87,7 +87,7 @@ def transform_cord(W, cords):
     matrix_transform = np.array([[math.cos(W), -math.sin(W), 0.0, math.cos(W) * drone_pose.pose.position.x + math.sin(W) * drone_pose.pose.position.y],
                                 [math.sin(W),  math.cos(W), 0.0,-math.sin(W) * drone_pose.pose.position.x + math.cos(W) * drone_pose.pose.position.y],
                                 [0.0, 0.0, 1.0, 0.0]])
-    print("martix = ", matrix_transform)
+    
     glob_cords = np.dot(cords, matrix_transform)
     X = glob_cords[0]
     Y = glob_cords[1]
@@ -190,7 +190,7 @@ def land():
     while drone_alt > 0.30:
 
         h = drone_alt - 0.1
-        (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(drone_pose.pose.orientation)
+        (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
         goal_point.pose.course = yaw
         goal_point.pose.point.x = drone_pose.pose.position.x
         goal_point.pose.point.y = drone_pose.pose.position.y
@@ -279,33 +279,24 @@ def main():
                 # вычисляем локальные координаты метки в кадре камеры(измерение в пиксельных единицах!!!!)
                 X = (point_land_green.cords[0] + (point_land_green.cords[2] / 2)) - len(frame[0]) / 2
                 Y = - ((point_land_green.cords[1] + (point_land_green.cords[3] / 2)) - len(frame) / 2)
-                #print("X, Y = ", float(X), float(Y))
-                #print type(drone_alt), drone_alt
+                
                 # считаем локальные координаты точки посадки в метрах(значения 21.8 и 16.1 это есть углы обзора камеры найденные экспериментальным путем)
                 glob_transform_cords = np.array([math.tan((21.8 / 320.0) * (math.pi / 180.0) * float(X)) * drone_alt, math.tan((16.1 / 240.0) * (math.pi / 180.0) * float(Y)) * drone_alt, 0.0])
-                #print glob_transform_cords
+               
                 # считаем углы поворота дрона из кватерниона в углы эйлера
-                #print drone_pose.pose.orientation
                 (roll,pitch,yaw) = tf.transformations.euler_from_quaternion(quaternion)
                 
-                #print (roll,pitch,yaw)
                 glob_X, glob_Y = transform_cord(yaw, glob_transform_cords)  # пересчитываем найденные локальные координаты в глобальные
                 
-                #print glob_X, glob_Y
+                print ("X = %s, Y = %s" %(glob_X, glob_Y))
                 goal_point.pose.course = yaw
                 goal_point.pose.point.x = glob_X
                 goal_point.pose.point.y = glob_Y
 
                 goal_pose_pub.publish(goal_point)
 
-                # angular = math.atan2(local_Y, local_X)
-                # print("ANGULAR = ", angular)
-                # print("local_X = %s local_Y = %s"  %(local_X, local_Y))
-                # cv.imshow("transform_matrix", frame_gray)
-                    
-               # except:
-               #     print("HYETA!")
-
+                                 
+             
                 # if point_land_blue.cords:
                 #     # рисуем прямоугольник описанный относительно контура
                 #     cv.rectangle(frame,

@@ -3,7 +3,7 @@
 
 import cv2 as cv
 
-cap = cv.VideoCapture("/dev/video1") # "/dev/video0"
+cap = cv.VideoCapture("/dev/video6") # "/dev/video0"
 
 while True:
 
