@@ -277,26 +277,25 @@ def main():
             if landing_flag:
                 print("LANDING!")
                 try:
-                	# вычисляем локальные координаты метки в кадре камеры(измерение в пиксельных единицах!!!!)
-                	X = (point_land_green.cords[0] + (point_land_green.cords[2] / 2)) - len(frame[0]) / 2
-                	Y = - ((point_land_green.cords[1] + (point_land_green.cords[3] / 2)) - len(frame) / 2)
-                
-               		 # считаем локальные координаты точки посадки в метрах(значения 21.8 и 16.1 это есть углы обзора камеры найденные экспериментальным путем)
-                	glob_transform_cords = np.array([math.tan((21.8 / 320.0) * (math.pi / 180.0) * float(X)) * drone_alt, math.tan((16.1 / 240.0) * (math.pi / 180.0) * float(Y)) * drone_alt, 0.0])
-               
+                    # вычисляем локальные координаты метки в кадре камеры(измерение в пиксельных единицах!!!!)
+                    X = (point_land_green.cords[0] + (point_land_green.cords[2] / 2)) - len(frame[0]) / 2
+                    Y = - ((point_land_green.cords[1] + (point_land_green.cords[3] / 2)) - len(frame) / 2)
 
-                	 # считаем углы поворота дрона из кватерниона в углы эйлера
+                     # считаем локальные координаты точки посадки в метрах(значения 21.8 и 16.1 это есть углы обзора камеры найденные экспериментальным путем)
+                    glob_transform_cords = np.array([math.tan((21.8 / 320.0) * (math.pi / 180.0) * float(X)) * drone_alt, math.tan((16.1 / 240.0) * (math.pi / 180.0) * float(Y)) * drone_alt, 0.0])
+
+                     # считаем углы поворота дрона из кватерниона в углы эйлера
                     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
-                
 
                     glob_X, glob_Y = transform_cord(yaw, glob_transform_cords)  # пересчитываем найденные локальные координаты в глобальные
-                	print ("ALT = %s" %drone_alt)
-                	print ("X = %s, Y = %s" %(glob_X, glob_Y))
-                	goal_point.pose.course = yaw
-                	goal_point.pose.point.x = glob_X
-                	goal_point.pose.point.y = glob_Y
+                    print ("ALT = %s" %drone_alt)
+                    print ("X = %s, Y = %s" %(glob_X, glob_Y))
+                    goal_point.pose.course = yaw
+                    goal_point.pose.point.x = glob_X
+                    goal_point.pose.point.y = glob_Y
 
-                	goal_pose_pub.publish(goal_point)
+                    goal_pose_pub.publish(goal_point)
+
                 except:
                     print("LOL! Fail!")
                                  
