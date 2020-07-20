@@ -8,7 +8,7 @@ import math
 import tf
 
 from std_msgs.msg import Float32
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Quaternion
 from drone_msgs.msg import Goal
 
 
@@ -81,11 +81,6 @@ def call_back_Drone_Alt(data):
 
 # функция преобразования локальных координат в глобальные координаты
 def transform_cord(W, cords):
-
-    # матрица преобразования
-    # matrix_transform = np.array([[math.cos(W), -math.sin(W), 0.0, math.cos(W) * drone_pose.pose.position.x + math.sin(W) * drone_pose.pose.position.y],
-    #                              [math.sin(W),  math.cos(W), 0.0,-math.sin(W) * drone_pose.pose.position.x + math.cos(W) * drone_pose.pose.position.y],
-    #                              [0.0, 0.0, 1.0, 0.0]])
 
     X = (math.cos(W) * (drone_pose.pose.position.x * math.cos(W) + drone_pose.pose.position.y * math.sin(W))) + (math.sin(W) * (drone_pose.pose.position.x * math.sin(W) - drone_pose.pose.position.y * math.cos(W))) + (cords[0] * math.cos(W) - cords[1] * math.sin(W))
     Y = (math.sin(W) * (drone_pose.pose.position.x * math.cos(W) + drone_pose.pose.position.y * math.sin(W))) - (math.cos(W) * (drone_pose.pose.position.x * math.sin(W) - drone_pose.pose.position.y * math.cos(W))) + (cords[0] * math.sin(W) + cords[1] * math.cos(W))
@@ -176,10 +171,6 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
 
         # получаем координаты прямоугольника описанного относительно контура
         detect_obj.cords = cv.boundingRect(contours[0])  # возвращает кортеж в формате  (x, y, w, h)
-
-        # print("x: %s, y: %s" % (detect_obj.cords[0] + (detect_obj.cords[2] // 2), detect_obj.cords[1] + (detect_obj.cords[3] // 2)))
-        # print("frame_center_cords:","x = ", len(frame[0])/2, "y = ", len(frame)/2)
-
         return detect_obj
 
     else:
@@ -190,9 +181,9 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
 def land():
     
     while drone_alt > 0.30:
-
         h = drone_alt - 0.1
         (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
+
         goal_point.pose.course = yaw
         goal_point.pose.point.x = drone_pose.pose.position.x
         goal_point.pose.point.y = drone_pose.pose.position.y
@@ -241,7 +232,7 @@ def main():
 
         if ret:
 
- #           cv.imshow("frame", frame)
+            # cv.imshow("frame", frame)
             # получаем бъект контура по указанному интервалу цвета
             point_land_blue = contour_finder(frame, BLUE_MIN_BGR, BLUE_MAX_BGR)
             # print(point_land_blue.cords)
@@ -265,16 +256,17 @@ def main():
 
             # проверяем сходство детектырованных масок и масок картинок зашитых в файл с проектом
             if marker_blue[0] - marker_blue[1] > 2900 and marker_green[0] - marker_green[1] > 2900:
-                print("True marker of land")
+                print("marker of land True ")
                 landing_flag = True
 
             else:
-                print("False marker of land")
+                print("marker of land False")
                 landing_flag = False
 
 
             # проверяем был ли обнаружен маркер посадки и если да, производим выполнение кода навигации
             if landing_flag:
+
                 print("LANDING!")
                 try:
                     # вычисляем локальные координаты метки в кадре камеры(измерение в пиксельных единицах!!!!)
@@ -297,7 +289,7 @@ def main():
                     goal_pose_pub.publish(goal_point)
 
                 except:
-                    print("LOL! Fail!")
+                    print("Oops! Fail!")
                                  
              
                 # if point_land_blue.cords:
