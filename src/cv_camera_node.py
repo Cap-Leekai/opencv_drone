@@ -6,11 +6,12 @@ import cv2 as cv
 import numpy as np
 import math
 import tf
+from cv_bridge import CvBridge
 
 from std_msgs.msg import Float32
 from geometry_msgs.msg import PoseStamped, Quaternion
 from drone_msgs.msg import Goal
-
+from sensor_msgs.msg import Image
 
 # класс хранящий основные параметры найденных контуров
 class contour_obj:
@@ -57,6 +58,7 @@ point_of_land_img = 'land_point_blue.png'
 alt_topic = "/drone/alt"                            # топик текущей высоты
 drone_pose_topic = "/mavros/local_position/pose"    # топик текущей позиции
 drone_goal_pose = "/goal_pose"                      # топик целевой точки
+camera_server_topic = "/camera_server"              # топик передачи картинки на сервер просмотра(для удаленного отображения картинки на ПК управления)
 
 # делаем захват видео с камеры в переменную cap
 cap = cv.VideoCapture("/dev/video0")  # stereo elp >> /dev/video2, /dev/video4
@@ -188,20 +190,21 @@ def land():
         goal_point.pose.point.x = drone_pose.pose.position.x
         goal_point.pose.point.y = drone_pose.pose.position.y
         goal_point.pose.point.z = h
-
         goal_pose_pub.publish(goal_point)
 
 # основная функция
 def main():
     
     rospy.init_node('cv_camera_capture') # инициальизируем данную ноду с именем cv_camera_capture
+    bridge = CvBridge()
 
     # инициализируем подписку на топик
-    rospy.Subscriber("/mavros/local_position/pose", PoseStamped, call_back_Drone_Pose)
-    rospy.Subscriber("/drone/alt", Float32, call_back_Drone_Alt)
+    rospy.Subscriber(drone_pose_topic, PoseStamped, call_back_Drone_Pose)
+    rospy.Subscriber(drone_alt, Float32, call_back_Drone_Alt)
 
     global goal_pose_pub
-    goal_pose_pub = rospy.Publisher("/goal_pose", Goal, queue_size=10)
+    goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size = 10)
+    camera_server_pub = rospy.Publisher(camera_server_topic, Image, queue_size = 1)
 
     hz = rospy.Rate(50)
     
@@ -263,6 +266,24 @@ def main():
                 print("marker of land False")
                 landing_flag = False
 
+            if point_land_green:
+                # рисуем прямоугольник описанный относительно контура
+                cv.rectangle(frame,
+                             (point_land_green.cords[0], point_land_green.cords[1]),
+                             (point_land_green.cords[0] + point_land_green.cords[2],
+                              point_land_green.cords[1] + point_land_green.cords[3]),
+                             (0, 255, 0), 2)
+
+                # рисуем окружность в центре детектируемого прямоугольника
+                cv.circle(frame,
+                          (point_land_green.cords[0] + (point_land_green.cords[2] // 2),
+                           point_land_green.cords[1] + (point_land_green.cords[3] // 2)), 5, (0, 255, 0), thickness=2)
+
+                cv.circle(frame,
+                          (len(frame[0]) // 2, len(frame) // 2), 5, (0, 255, 0), thickness=2)
+
+                image_message = bridge.cv2_to_imgmsg(frame, encoding="passthrough")
+                camera_server_pub.publish(image_message)
 
             # проверяем был ли обнаружен маркер посадки и если да, производим выполнение кода навигации
             if landing_flag:
@@ -280,39 +301,16 @@ def main():
                     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
 
                     glob_X, glob_Y = transform_cord(yaw, glob_transform_cords)  # пересчитываем найденные локальные координаты в глобальные
-                    print ("ALT = %s" %drone_alt)
-                    print ("X = %s, Y = %s" %(glob_X, glob_Y))
+                    print ("X = %s, Y = %s, Z = %s" %(glob_X, glob_Y, drone_alt))
                     goal_point.pose.course = yaw
                     goal_point.pose.point.x = glob_X
                     goal_point.pose.point.y = glob_Y
-
+                    goal_point.pose.point.z = drone_alt  #!#!#!#
                     goal_pose_pub.publish(goal_point)
 
                 except:
                     print("Oops! Fail!")
                                  
-             
-                # if point_land_blue.cords:
-                #     # рисуем прямоугольник описанный относительно контура
-                #     cv.rectangle(frame,
-                #                 (point_land_green.cords[0], point_land_green.cords[1]),
-                #                 (point_land_green.cords[0] + point_land_green.cords[2], point_land_green.cords[1] + point_land_green.cords[3]),
-                #                 (0, 255, 0), 2)
-                #
-                #     # рисуем окружность в центре детектируемого прямоугольника
-                #     cv.circle(frame,
-                #              (point_land_green.cords[0] + (point_land_green.cords[2] // 2),
-                #               point_land_green.cords[1] + (point_land_green.cords[3] // 2)), 5, (0, 255, 0),thickness=2)
-                #
-                #     cv.circle(frame,
-                #               (len(frame[0]) // 2, len(frame) // 2), 5, (0, 255, 0), thickness=2)
-                #
-                #     cv.imshow("Pointsy", frame)
-
-
-
-                # else:
-                #     cv.destroyWindow("Pointsy")
 
             if cv.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
                 break
