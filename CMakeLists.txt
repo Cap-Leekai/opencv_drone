@@ -8,6 +8,7 @@ project(cv_camera)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  cv_bridge
   rospy
 )
 
@@ -202,3 +203,13 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+#catkin_install_python(PROGRAMS bin/cv_camera_node
+#  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+#)
+
+## Specify additional locations of header files
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+)

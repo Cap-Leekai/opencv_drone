@@ -200,7 +200,7 @@ def main():
 
     # инициализируем подписку на топик
     rospy.Subscriber(drone_pose_topic, PoseStamped, call_back_Drone_Pose)
-    rospy.Subscriber(drone_alt, Float32, call_back_Drone_Alt)
+    rospy.Subscriber(alt_topic, Float32, call_back_Drone_Alt)
 
     global goal_pose_pub
     goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size = 10)
