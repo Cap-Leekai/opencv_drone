@@ -206,7 +206,7 @@ def main():
     goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size = 10)
     camera_server_pub = rospy.Publisher(camera_server_topic, Image, queue_size = 1)
 
-    hz = rospy.Rate(50)
+    hz = rospy.Rate(10)
     
     # инициализируем все переменные хранящие маски детектируемых картинок из памяти
     global point_land_mask_blue, point_land_mask_green
@@ -235,9 +235,8 @@ def main():
 
         if ret:
 
-            # рисуем окружность в центре детектируемого прямоугольника
+            # рисуем окружность в центре кадра камеры
             cv.circle(copy_frame, (len(copy_frame[0]) // 2, len(copy_frame) // 2), 5, (0, 255, 0), thickness=2)
-
             image_message = bridge.cv2_to_imgmsg(copy_frame, encoding="passthrough")
             # публикуем кадр с топик для мониторинга на внешнем ПК
             camera_server_pub.publish(image_message)
@@ -251,7 +250,7 @@ def main():
             # получаем бъект контура по указанному интервалу цвета
             point_land_green = contour_finder(frame, GREEN_MIN_BGR, GREEN_MAX_BGR)
             # print(point_land_green.cords)
-#            cv.imshow("point_green", point_land_green.mask)
+#           cv.imshow("point_green", point_land_green.mask)
 
             # сравниваем маски с камеры и маску сделанную из файлов
             marker_blue = detect_marker(cut_contour(copy_frame, point_land_blue.cords, BLUE_MIN_BGR, BLUE_MAX_BGR),
