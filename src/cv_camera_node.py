@@ -6,8 +6,9 @@ import cv2 as cv
 import numpy as np
 import math
 import tf
-from cv_bridge import CvBridge
+import time
 
+from cv_bridge import CvBridge
 from std_msgs.msg import Float32
 from geometry_msgs.msg import PoseStamped, Quaternion
 from drone_msgs.msg import Goal
@@ -294,7 +295,7 @@ def main():
                     goal_point.pose.point.y = glob_Y
                     goal_point.pose.point.z = drone_alt  #!#!#!#
                     goal_pose_pub.publish(goal_point)
-
+                    time.sleep(3)
                     if goal_point.pose.point.x - drone_pose.pose.position.x < 0.2 and goal_point.pose.point.y - drone_pose.pose.position.y < 0.2:
                         if goal_point.pose.point.z > 0.0:
                             h = goal_point.pose.point.z - 0.01
