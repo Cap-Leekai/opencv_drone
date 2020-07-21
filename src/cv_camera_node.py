@@ -285,6 +285,8 @@ def main():
 
                     image_message = bridge.cv2_to_imgmsg(frame, encoding="passthrough")
                     camera_server_pub.publish(image_message)
+            except:
+                print("Fail pub frame to server")
 
             # проверяем был ли обнаружен маркер посадки и если да, производим выполнение кода навигации
             if landing_flag:
