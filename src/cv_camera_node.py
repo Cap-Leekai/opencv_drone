@@ -266,24 +266,25 @@ def main():
                 print("marker of land False")
                 landing_flag = False
 
-            if point_land_green:
-                # рисуем прямоугольник описанный относительно контура
-                cv.rectangle(frame,
-                             (point_land_green.cords[0], point_land_green.cords[1]),
-                             (point_land_green.cords[0] + point_land_green.cords[2],
-                              point_land_green.cords[1] + point_land_green.cords[3]),
-                             (0, 255, 0), 2)
+            try:
+                if point_land_green:
+                    # рисуем прямоугольник описанный относительно контура
+                    cv.rectangle(frame,
+                                 (point_land_green.cords[0], point_land_green.cords[1]),
+                                 (point_land_green.cords[0] + point_land_green.cords[2],
+                                  point_land_green.cords[1] + point_land_green.cords[3]),
+                                 (0, 255, 0), 2)
 
-                # рисуем окружность в центре детектируемого прямоугольника
-                cv.circle(frame,
-                          (point_land_green.cords[0] + (point_land_green.cords[2] // 2),
-                           point_land_green.cords[1] + (point_land_green.cords[3] // 2)), 5, (0, 255, 0), thickness=2)
+                    # рисуем окружность в центре детектируемого прямоугольника
+                    cv.circle(frame,
+                              (point_land_green.cords[0] + (point_land_green.cords[2] // 2),
+                               point_land_green.cords[1] + (point_land_green.cords[3] // 2)), 5, (0, 255, 0), thickness=2)
 
-                cv.circle(frame,
-                          (len(frame[0]) // 2, len(frame) // 2), 5, (0, 255, 0), thickness=2)
+                    cv.circle(frame,
+                              (len(frame[0]) // 2, len(frame) // 2), 5, (0, 255, 0), thickness=2)
 
-                image_message = bridge.cv2_to_imgmsg(frame, encoding="passthrough")
-                camera_server_pub.publish(image_message)
+                    image_message = bridge.cv2_to_imgmsg(frame, encoding="passthrough")
+                    camera_server_pub.publish(image_message)
 
             # проверяем был ли обнаружен маркер посадки и если да, производим выполнение кода навигации
             if landing_flag:
