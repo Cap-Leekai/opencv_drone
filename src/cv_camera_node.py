@@ -295,9 +295,18 @@ def main():
                     goal_point.pose.point.z = drone_alt  #!#!#!#
                     goal_pose_pub.publish(goal_point)
 
-                    if goal_point.pose.point.x == drone_pose.pose.position.x and goal_point.pose.point.y == drone_pose.pose.position.y:
-                        land()
+                    if goal_point.pose.point.x - drone_pose.pose.position.x < 0.2 and goal_point.pose.point.y - drone_pose.pose.position.y < 0.2:
+                        if goal_point.pose.point.z > 0.0:
+                            h = goal_point.pose.point.z - 0.01
+                            (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
 
+                            goal_point.pose.course = yaw
+                            goal_point.pose.point.x = drone_pose.pose.position.x
+                            goal_point.pose.point.y = drone_pose.pose.position.y
+                            goal_point.pose.point.z = h
+                            goal_pose_pub.publish(goal_point)
+                        else:
+                            break
                 except:
                     print("Oops! Fail!")
                                  
