@@ -195,7 +195,7 @@ def land():
 
 # основная функция
 def main():
-    
+    global landing_flag
     rospy.init_node('cv_camera_capture') # инициальизируем данную ноду с именем cv_camera_capture
     bridge = CvBridge()
 
