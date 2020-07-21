@@ -267,7 +267,7 @@ def main():
                 landing_flag = False
 
             try:
-                print("DEBUG = ", point_land_green)
+                print("DEBUG = ", len(point_land_green))
 
                 if point_land_green:
                     # рисуем прямоугольник описанный относительно контура
