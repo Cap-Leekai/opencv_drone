@@ -295,6 +295,9 @@ def main():
                     goal_point.pose.point.z = drone_alt  #!#!#!#
                     goal_pose_pub.publish(goal_point)
 
+                    if goal_point.pose.point.x == drone_pose.pose.position.x and goal_point.pose.point.y == drone_pose.pose.position.y:
+                        land()
+
                 except:
                     print("Oops! Fail!")
                                  
