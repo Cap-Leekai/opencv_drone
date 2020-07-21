@@ -298,7 +298,7 @@ def main():
                     if goal_point.pose.point.x - drone_pose.pose.position.x < 0.2 and goal_point.pose.point.y - drone_pose.pose.position.y < 0.2:
                         if goal_point.pose.point.z > 0.0:
                             h = goal_point.pose.point.z - 0.01
-                            (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
+                            #(roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
 
                             goal_point.pose.course = yaw
                             goal_point.pose.point.x = drone_pose.pose.position.x
