@@ -242,6 +242,7 @@ def main():
             # публикуем кадр с топик для мониторинга на внешнем ПК
             camera_server_pub.publish(image_message)
 
+            global point_land_green, point_land_blue
             # cv.imshow("frame", frame)
             # получаем бъект контура по указанному интервалу цвета
             point_land_blue = contour_finder(frame, BLUE_MIN_BGR, BLUE_MAX_BGR)
@@ -269,14 +270,15 @@ def main():
                 print("marker of land True ")
                 landing_flag = True
 
-            else:
-                print("marker of land False")
-                landing_flag = False
+            # else:
+            #     print("marker of land False")
+            #     landing_flag = False
 
             # проверяем был ли обнаружен маркер посадки и если да, производим выполнение кода навигации
             if landing_flag:
 
                 print("LANDING!")
+
                 try:
                     # вычисляем локальные координаты метки в кадре камеры(измерение в пиксельных единицах!!!!)
                     X = (point_land_green.cords[0] + (point_land_green.cords[2] / 2)) - len(frame[0]) / 2
@@ -295,10 +297,11 @@ def main():
                     goal_point.pose.point.y = glob_Y
                     goal_point.pose.point.z = drone_alt  #!#!#!#
                     goal_pose_pub.publish(goal_point)
-                    time.sleep(3)
-                    if goal_point.pose.point.x - drone_pose.pose.position.x < 0.2 and goal_point.pose.point.y - drone_pose.pose.position.y < 0.2:
+                    #time.sleep(3)
+
+                    if abs(goal_point.pose.point.x - drone_pose.pose.position.x) < 0.1 and abs(goal_point.pose.point.y - drone_pose.pose.position.y) < 0.1:
                         if goal_point.pose.point.z > 0.0:
-                            h = goal_point.pose.point.z - 0.01
+                            h = goal_point.pose.point.z - 0.05
                             #(roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
 
                             goal_point.pose.course = yaw
