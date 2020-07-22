@@ -205,7 +205,7 @@ def main():
 
     global goal_pose_pub
     goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size = 10)
-    camera_server_pub = rospy.Publisher(camera_server_topic, Image, queue_size = 10)
+    camera_server_pub = rospy.Publisher(camera_server_topic, Image, queue_size = 2)
 
     hz = rospy.Rate(10)
     
