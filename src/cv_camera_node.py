@@ -195,7 +195,7 @@ def land():
 
 # основная функция
 def main():
-    
+    global landing_flag
     rospy.init_node('cv_camera_capture') # инициальизируем данную ноду с именем cv_camera_capture
     bridge = CvBridge()
 
@@ -205,7 +205,7 @@ def main():
 
     global goal_pose_pub
     goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size = 10)
-    camera_server_pub = rospy.Publisher(camera_server_topic, Image, queue_size = 1)
+    camera_server_pub = rospy.Publisher(camera_server_topic, Image, queue_size = 10)
 
     hz = rospy.Rate(10)
     
@@ -238,8 +238,9 @@ def main():
 
             # рисуем окружность в центре кадра камеры
             cv.circle(copy_frame, (len(copy_frame[0]) // 2, len(copy_frame) // 2), 5, (0, 255, 0), thickness=2)
-            image_message = bridge.cv2_to_imgmsg(copy_frame, encoding="passthrough")
-            # публикуем кадр в топик для мониторинга на внешнем ПК
+            image_message = bridge.cv2_to_imgmsg(copy_frame, "bgr8")
+            # публикуем кадр с топик для мониторинга на внешнем ПК
+
             camera_server_pub.publish(image_message)
 
             global point_land_green, point_land_blue

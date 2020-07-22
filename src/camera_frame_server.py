@@ -8,11 +8,12 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 
 camera_server_topic = "/camera_server"
+img_copy = None
 
 def camera_frame_cb(data):
-    global cv_image
-    # print(data)
-    cv_image = bridge.imgmsg_to_cv2(data, "bgr8")
+    global img_msg
+    img_msg = data
+
     print("readed")
 
 def main():
@@ -25,6 +26,11 @@ def main():
         rospy.Subscriber(camera_server_topic, Image, camera_frame_cb)
 
         try:
+            # if img_msg == img_copy:
+            #     print("YES")
+            img_copy = img_msg
+
+            cv_image = bridge.imgmsg_to_cv2(img_msg, "bgr8")
             cv2.imshow("Frame_server1", cv_image)
             if cv2.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
                 break
