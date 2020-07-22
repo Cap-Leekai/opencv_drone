@@ -208,7 +208,7 @@ def main():
     camera_server_pub = rospy.Publisher(camera_server_topic, Image, queue_size = 2)
 
     hz = rospy.Rate(10)
-    
+
     # инициализируем все переменные хранящие маски детектируемых картинок из памяти
     global point_land_mask_blue, point_land_mask_green
 
@@ -238,9 +238,9 @@ def main():
 
             # рисуем окружность в центре кадра камеры
             cv.circle(copy_frame, (len(copy_frame[0]) // 2, len(copy_frame) // 2), 5, (0, 255, 0), thickness=2)
-            image_message = bridge.cv2_to_imgmsg(copy_frame, "bgr8")
+            img = cv.resize(img, (160, 120))
+            image_message = bridge.cv2_to_imgmsg(img, "bgr8")
             # публикуем кадр с топик для мониторинга на внешнем ПК
-
             camera_server_pub.publish(image_message)
 
             global point_land_green, point_land_blue
