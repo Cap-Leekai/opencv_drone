@@ -205,9 +205,9 @@ def main():
 
     global goal_pose_pub
     goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size = 10)
-    camera_server_pub = rospy.Publisher(camera_server_topic, Image, queue_size = 10)
+    camera_server_pub = rospy.Publisher(camera_server_topic, Image, queue_size = 2)
 
-    hz = rospy.Rate(10)
+    hz = rospy.Rate(20)
     
     # инициализируем все переменные хранящие маски детектируемых картинок из памяти
     global point_land_mask_blue, point_land_mask_green
@@ -270,8 +270,8 @@ def main():
                 print("marker of land True ")
                 landing_flag = True
 
-            # else:
-            #     print("marker of land False")
+            else:
+                print("marker of land False")
             #     landing_flag = False
 
             # проверяем был ли обнаружен маркер посадки и если да, производим выполнение кода навигации
