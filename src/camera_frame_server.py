@@ -26,11 +26,8 @@ def main():
         rospy.Subscriber(camera_server_topic, Image, camera_frame_cb)
 
         try:
-            # if img_msg == img_copy:
-            #     print("YES")
-            img_copy = img_msg
-
             cv_image = bridge.imgmsg_to_cv2(img_msg, "bgr8")
+            cv_image = cv2.resize(cv_image, (320, 240))
             cv2.imshow("Frame_server1", cv_image)
             if cv2.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
                 break
