@@ -238,7 +238,7 @@ def main():
 
             # рисуем окружность в центре кадра камеры
             cv.circle(copy_frame, (len(copy_frame[0]) // 2, len(copy_frame) // 2), 5, (0, 255, 0), thickness=2)
-            copy_frame = cv.resize(copy_frame, (320, 240))
+            copy_frame = cv.resize(copy_frame, (160, 120))
             image_message = bridge.cv2_to_imgmsg(copy_frame, "bgr8")
             # публикуем кадр с топик для мониторинга на внешнем ПК
             camera_server_pub.publish(image_message)
