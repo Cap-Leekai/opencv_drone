@@ -278,7 +278,6 @@ def main():
             if landing_flag:
 
                 print("LANDING!")
-
                 try:
                     # вычисляем локальные координаты метки в кадре камеры(измерение в пиксельных единицах!!!!)
                     X = (point_land_green.cords[0] + (point_land_green.cords[2] / 2)) - len(frame[0]) / 2
