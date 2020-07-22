@@ -33,12 +33,12 @@ GREEN_MIN_BGR = (44, 69, 0)           # (45, 63, 0)
 GREEN_MAX_BGR = (80, 146, 255)        # (80, 255, 162)
 
 # диапазон синего круга в метке посадки детектируемой камерой
-POINT_LAND_MIN_BLUE = (201, 0, 0)        # blue
-POINT_LAND_MAX_BLUE = (255, 10, 255)
+POINT_LAND_MIN_BLUE = (84, 177, 0)        # blue
+POINT_LAND_MAX_BLUE = (255, 255, 255)
 
 # диапазон зеленого круга в метке посадки детектируемой камерой
-POINT_LAND_MIN_GREEN = (0, 146, 0)
-POINT_LAND_MAX_GREEN = (161, 255, 255)
+POINT_LAND_MIN_GREEN = (54, 69, 163)
+POINT_LAND_MAX_GREEN = (84, 164, 255)
 
 # флаги
 view_window_flag = False    # фдаг отображения окон с результатами обработки изображений сделано для отладки
@@ -240,6 +240,7 @@ def main():
             cv.circle(copy_frame, (len(copy_frame[0]) // 2, len(copy_frame) // 2), 5, (0, 255, 0), thickness=2)
             image_message = bridge.cv2_to_imgmsg(copy_frame, "bgr8")
             # публикуем кадр с топик для мониторинга на внешнем ПК
+
             camera_server_pub.publish(image_message)
 
             global point_land_green, point_land_blue
@@ -278,14 +279,13 @@ def main():
             if landing_flag:
 
                 print("LANDING!")
-
                 try:
                     # вычисляем локальные координаты метки в кадре камеры(измерение в пиксельных единицах!!!!)
                     X = (point_land_green.cords[0] + (point_land_green.cords[2] / 2)) - len(frame[0]) / 2
                     Y = - ((point_land_green.cords[1] + (point_land_green.cords[3] / 2)) - len(frame) / 2)
 
                      # считаем локальные координаты точки посадки в метрах(значения 21.8 и 16.1 это есть углы обзора камеры найденные экспериментальным путем)
-                    glob_transform_cords = np.array([math.tan((21.8 / 320.0) * (math.pi / 180.0) * float(X)) * drone_alt, math.tan((16.1 / 240.0) * (math.pi / 180.0) * float(Y)) * drone_alt, 0.0])
+                    glob_transform_cords = np.array([math.tan((21.8 / (len(frame[0])/2)) * (math.pi / 180.0) * float(X)) * drone_alt, math.tan((16.1 / (len(frame)/2)) * (math.pi / 180.0) * float(Y)) * drone_alt, 0.0])
 
                      # считаем углы поворота дрона из кватерниона в углы эйлера
                     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
