@@ -30,8 +30,8 @@ BLUE_MAX_BGR = (255, 255, 255)       # orange(94, 255, 255)
 
 
 # диапазон зеленого круга в метке посадки детектируемой камерой
-GREEN_MIN_BGR = (0, 94, 254)           # (45, 63, 0)
-GREEN_MAX_BGR = (255, 130, 255)        # (80, 255, 162)
+GREEN_MIN_BGR = (59, 78, 0)           # (45, 63, 0)
+GREEN_MAX_BGR = (91, 255, 255)        # (80, 255, 162)
 
 
 # диапазон синего круга в метке посадки загруженной из папки с проектом
@@ -255,12 +255,12 @@ def main():
             # получаем бъект контура по указанному интервалу цвета
             point_land_blue = contour_finder(frame, BLUE_MIN_BGR, BLUE_MAX_BGR)
             # print(point_land_blue.cords)
-#            cv.imshow("point_blue", point_land_blue.mask)
+            cv.imshow("point_blue", point_land_blue.mask)
 
             # получаем бъект контура по указанному интервалу цвета
             point_land_green = contour_finder(frame, GREEN_MIN_BGR, GREEN_MAX_BGR)
             # print(point_land_green.cords)
-#            cv.imshow("point_green", point_land_green.mask)
+            cv.imshow("point_green", point_land_green.mask)
 
             # сравниваем маски с камеры и маску сделанную из файлов
             marker_blue = detect_marker(cut_contour(copy_frame, point_land_blue.cords, BLUE_MIN_BGR, BLUE_MAX_BGR),
