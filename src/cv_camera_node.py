@@ -255,12 +255,12 @@ def main():
             # получаем бъект контура по указанному интервалу цвета
             point_land_blue = contour_finder(frame, BLUE_MIN_BGR, BLUE_MAX_BGR)
             # print(point_land_blue.cords)
-            cv.imshow("point_blue", point_land_blue.mask)
+            # cv.imshow("point_blue", point_land_blue.mask)
 
             # получаем бъект контура по указанному интервалу цвета
             point_land_green = contour_finder(frame, GREEN_MIN_BGR, GREEN_MAX_BGR)
             # print(point_land_green.cords)
-            cv.imshow("point_green", point_land_green.mask)
+            # cv.imshow("point_green", point_land_green.mask)
 
             # сравниваем маски с камеры и маску сделанную из файлов
             marker_blue = detect_marker(cut_contour(copy_frame, point_land_blue.cords, BLUE_MIN_BGR, BLUE_MAX_BGR),
