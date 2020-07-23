@@ -4,6 +4,9 @@
 import cv2 as cv
 
 cap = cv.VideoCapture("/dev/video0") # "/dev/video0"
+cap.set(cv.CAP_PROP_FPS, 24) # Частота кадров
+cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920) # Ширина кадров в видеопотоке.
+cap.set(cv.CAP_PROP_FRAME_HEIGHT, 1080) # Высота кадров в видеопотоке.
 
 while True:
 

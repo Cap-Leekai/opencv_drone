@@ -63,7 +63,9 @@ camera_server_topic = "/camera_server"              # топик передач�
 
 # делаем захват видео с камеры в переменную cap
 cap = cv.VideoCapture("/dev/video0")  # stereo elp >> /dev/video2, /dev/video4
-
+cap.set(cv.CAP_PROP_FPS, 24) # Частота кадров
+cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920) # Ширина кадров в видеопотоке.
+cap.set(cv.CAP_PROP_FRAME_HEIGHT, 1080) # Высота кадров в видеопотоке.
 
 # функция считывания текущего положения дрона
 def call_back_Drone_Pose(data):
