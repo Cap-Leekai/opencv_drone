@@ -287,7 +287,7 @@ def main():
                     Y = - ((point_land_green.cords[1] + (point_land_green.cords[3] / 2)) - len(frame) / 2)
 
                      # считаем локальные координаты точки посадки в метрах(значения 21.8 и 16.1 это есть углы обзора камеры найденные экспериментальным путем)
-                    glob_transform_cords = np.array([math.tan((21.8 / (len(frame[0])/2)) * (math.pi / 180.0) * float(X)) * drone_alt, math.tan((16.1 / (len(frame)/2)) * (math.pi / 180.0) * float(Y)) * drone_alt, 0.0])
+                    glob_transform_cords = np.array([math.tan((32.3 / (len(frame[0])/2)) * (math.pi / 180.0) * float(X)) * drone_alt, math.tan((19.5 / (len(frame)/2)) * (math.pi / 180.0) * float(Y)) * drone_alt, 0.0])
 
                      # считаем углы поворота дрона из кватерниона в углы эйлера
                     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
