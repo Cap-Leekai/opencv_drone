@@ -24,25 +24,29 @@ class contour_obj:
 
 
 # задаем пороги цвета
-# диапазон синего круга в метке посадки загруженной из папки с проектом
-BLUE_MIN_BGR = (104, 104, 0)        # orange(0, 135, 100)
+# диапазон синего круга в метке посадки детектируемой камерой
+BLUE_MIN_BGR = (61, 167, 0)        # orange(0, 135, 100)
 BLUE_MAX_BGR = (255, 255, 255)       # orange(94, 255, 255)
 
-# диапазон зеленого круга в метке посадки загруженной из папки с проектом
-GREEN_MIN_BGR = (44, 69, 0)           # (45, 63, 0)
-GREEN_MAX_BGR = (80, 146, 255)        # (80, 255, 162)
-
-# диапазон синего круга в метке посадки детектируемой камерой
-POINT_LAND_MIN_BLUE = (84, 177, 0)        # blue
-POINT_LAND_MAX_BLUE = (255, 255, 255)
 
 # диапазон зеленого круга в метке посадки детектируемой камерой
-POINT_LAND_MIN_GREEN = (54, 69, 163)
-POINT_LAND_MAX_GREEN = (84, 164, 255)
+GREEN_MIN_BGR = (0, 94, 254)           # (45, 63, 0)
+GREEN_MAX_BGR = (255, 130, 255)        # (80, 255, 162)
+
+
+# диапазон синего круга в метке посадки загруженной из папки с проектом
+POINT_LAND_MIN_BLUE = (0, 0, 0)        # blue
+POINT_LAND_MAX_BLUE = (255, 0, 0)
+
+
+# диапазон зеленого круга в метке посадки загруженной из папки с проектом
+POINT_LAND_MIN_GREEN = (0, 0, 0)
+POINT_LAND_MAX_GREEN = (0, 255, 255)
 
 # флаги
 view_window_flag = False    # фдаг отображения окон с результатами обработки изображений сделано для отладки
 landing_flag = False        # флаг посадки
+camera_server_flag = False
 
 # переменные
 drone_alt = 0.0             # текущая высота дрона
@@ -238,12 +242,13 @@ def main():
 
         if ret:
 
-            # рисуем окружность в центре кадра камеры
-            cv.circle(copy_frame, (len(copy_frame[0]) // 2, len(copy_frame) // 2), 5, (0, 255, 0), thickness=2)
-            copy_frame = cv.resize(copy_frame, (160, 120))
-            image_message = bridge.cv2_to_imgmsg(copy_frame, "bgr8")
-            # публикуем кадр с топик для мониторинга на внешнем ПК
-            camera_server_pub.publish(image_message)
+            if camera_server_flag:
+                # рисуем окружность в центре кадра камеры
+                cv.circle(copy_frame, (len(copy_frame[0]) // 2, len(copy_frame) // 2), 5, (0, 255, 0), thickness=2)
+                copy_frame = cv.resize(copy_frame, (160, 120))
+                image_message = bridge.cv2_to_imgmsg(copy_frame, "bgr8")
+                # публикуем кадр с топик для мониторинга на внешнем ПК
+                camera_server_pub.publish(image_message)
 
             global point_land_green, point_land_blue
             # cv.imshow("frame", frame)
@@ -255,7 +260,7 @@ def main():
             # получаем бъект контура по указанному интервалу цвета
             point_land_green = contour_finder(frame, GREEN_MIN_BGR, GREEN_MAX_BGR)
             # print(point_land_green.cords)
-#           cv.imshow("point_green", point_land_green.mask)
+#            cv.imshow("point_green", point_land_green.mask)
 
             # сравниваем маски с камеры и маску сделанную из файлов
             marker_blue = detect_marker(cut_contour(copy_frame, point_land_blue.cords, BLUE_MIN_BGR, BLUE_MAX_BGR),
@@ -275,8 +280,7 @@ def main():
 
             else:
                 print("marker of land False")
-            #     landing_flag = False
-
+            
             # проверяем был ли обнаружен маркер посадки и если да, производим выполнение кода навигации
             if landing_flag:
 
@@ -297,9 +301,9 @@ def main():
                     goal_point.pose.course = yaw
                     goal_point.pose.point.x = glob_X
                     goal_point.pose.point.y = glob_Y
-                    goal_point.pose.point.z = drone_alt  #!#!#!#
+                    goal_point.pose.point.z = drone_alt  
                     goal_pose_pub.publish(goal_point)
-                    #time.sleep(3)
+                   
 
                     if abs(goal_point.pose.point.x - drone_pose.pose.position.x) < 0.1 and abs(goal_point.pose.point.y - drone_pose.pose.position.y) < 0.1:
                         if goal_point.pose.point.z > 0.0:

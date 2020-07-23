@@ -14,7 +14,7 @@ while True:
     print ret
 
     if ret:
-        frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        #frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         cv.imshow("hnya", frame)
         print(len(frame[0]))
         #print(result)
