@@ -188,16 +188,13 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
 
 # функция посадки
 def land():
-    
-    while drone_alt > 0.30:
-        h = drone_alt - 0.1
-        (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
-
-        goal_point.pose.course = yaw
-        goal_point.pose.point.x = drone_pose.pose.position.x
-        goal_point.pose.point.y = drone_pose.pose.position.y
-        goal_point.pose.point.z = h
-        goal_pose_pub.publish(goal_point)
+    h = goal_point.pose.point.z - 0.1
+    (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
+    goal_point.pose.course = yaw
+    goal_point.pose.point.x = drone_pose.pose.position.x
+    goal_point.pose.point.y = drone_pose.pose.position.y
+    goal_point.pose.point.z = h
+    goal_pose_pub.publish(goal_point)
 
 # основная функция
 def main():
@@ -307,14 +304,7 @@ def main():
 
                     if abs(goal_point.pose.point.x - drone_pose.pose.position.x) < 0.1 and abs(goal_point.pose.point.y - drone_pose.pose.position.y) < 0.1:
                         if goal_point.pose.point.z > 0.0:
-                            h = goal_point.pose.point.z - 0.1
-                            #(roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
-
-                            goal_point.pose.course = yaw
-                            goal_point.pose.point.x = drone_pose.pose.position.x
-                            goal_point.pose.point.y = drone_pose.pose.position.y
-                            goal_point.pose.point.z = h
-                            goal_pose_pub.publish(goal_point)
+                            land()
                         else:
                             break
                 except:
