@@ -54,10 +54,9 @@ drone_pose = PoseStamped()  # текущая позиция дрона в гло
 goal_point = Goal()         # целевая точка, в которую должен лететь дрон
 max_resize = (64, 64)       # задаем максимальный размер кадра для "ресайза" выделенных контуров
 
-# названия фреймов из проекта
-
+# названия путей
 point_of_land_img = 'land_point_blue.png'
-
+camera_file_port = "/dev/video0"
 
 # topics
 alt_topic = "/drone/alt"                            # топик текущей высоты
@@ -66,7 +65,7 @@ drone_goal_pose = "/goal_pose"                      # топик целевой 
 camera_server_topic = "/camera_server"              # топик передачи картинки на сервер просмотра(для удаленного отображения картинки на ПК управления)
 
 # делаем захват видео с камеры в переменную cap
-cap = cv.VideoCapture("/dev/video0")  # stereo elp >> /dev/video2, /dev/video4
+cap = cv.VideoCapture(camera_file_port)  # stereo elp >> /dev/video2, /dev/video4
 cap.set(cv.CAP_PROP_FPS, 24) # Частота кадров
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920) # Ширина кадров в видеопотоке.
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 1080) # Высота кадров в видеопотоке.
