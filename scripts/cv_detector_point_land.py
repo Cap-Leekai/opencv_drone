@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #coding=utf8
 
 import rospy
@@ -6,7 +6,7 @@ import cv2 as cv
 import numpy as np
 import math
 import tf
-import time
+
 
 from cv_bridge import CvBridge
 from std_msgs.msg import Float32
@@ -25,17 +25,17 @@ class contour_obj:
 
 # задаем пороги цвета
 # диапазон синего круга в метке посадки детектируемой камерой
-BLUE_MIN_BGR = (61, 167, 0)        # orange(0, 135, 100)
-BLUE_MAX_BGR = (255, 255, 255)       # orange(94, 255, 255)
+BLUE_MIN_BGR = (61, 167, 0)
+BLUE_MAX_BGR = (255, 255, 255)
 
 
 # диапазон зеленого круга в метке посадки детектируемой камерой
-GREEN_MIN_BGR = (59, 78, 0)           # (45, 63, 0)
-GREEN_MAX_BGR = (91, 255, 255)        # (80, 255, 162)
+GREEN_MIN_BGR = (59, 78, 0)
+GREEN_MAX_BGR = (91, 255, 255)
 
 
 # диапазон синего круга в метке посадки загруженной из папки с проектом
-POINT_LAND_MIN_BLUE = (0, 0, 0)        # blue
+POINT_LAND_MIN_BLUE = (0, 0, 0)
 POINT_LAND_MAX_BLUE = (255, 0, 0)
 
 
@@ -56,7 +56,8 @@ max_resize = (64, 64)       # задаем максимальный размер
 
 # названия путей
 point_of_land_img = 'land_point_blue.png'
-camera_file_port = "/dev/video0"
+logotip_img = 'logotip.png'
+camera_file_port = "/dev/video2"
 
 # topics
 alt_topic = "/drone/alt"                            # топик текущей высоты
@@ -65,13 +66,16 @@ drone_goal_pose = "/goal_pose"                      # топик целевой 
 camera_server_topic = "/camera_server"              # топик передачи картинки на сервер просмотра(для удаленного отображения картинки на ПК управления)
 
 # делаем захват видео с камеры в переменную cap
-cap = cv.VideoCapture(camera_file_port)  # stereo elp >> /dev/video2, /dev/video4
-cap.set(cv.CAP_PROP_FPS, 24) # Частота кадров
-cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920) # Ширина кадров в видеопотоке.
-cap.set(cv.CAP_PROP_FRAME_HEIGHT, 1080) # Высота кадров в видеопотоке.
+cap1 = cv.VideoCapture(camera_file_port)  # stereo elp >> /dev/video2, /dev/video4
+cap1.set(cv.CAP_PROP_FPS, 24) # Частота кадров
+cap1.set(cv.CAP_PROP_FRAME_WIDTH, 1920) # Ширина кадров в видеопотоке.
+cap1.set(cv.CAP_PROP_FRAME_HEIGHT, 1080) # Высота кадров в видеопотоке.
+
+def frame_down_cb():
+    pass
 
 # функция считывания текущего положения дрона
-def call_back_Drone_Pose(data):
+def drone_pose_cb(data):
     global drone_pose, quaternion
     drone_pose = data
     quaternion = (
@@ -82,7 +86,7 @@ def call_back_Drone_Pose(data):
 
 
 # функция считывания текущей высоты
-def call_back_Drone_Alt(data):
+def drone_alt_cb(data):
     global drone_alt
     drone_alt = data.data
 
@@ -93,9 +97,6 @@ def transform_cord(W, cords):
     X = (math.cos(W) * (drone_pose.pose.position.x * math.cos(W) + drone_pose.pose.position.y * math.sin(W))) + (math.sin(W) * (drone_pose.pose.position.x * math.sin(W) - drone_pose.pose.position.y * math.cos(W))) + (cords[0] * math.cos(W) - cords[1] * math.sin(W))
     Y = (math.sin(W) * (drone_pose.pose.position.x * math.cos(W) + drone_pose.pose.position.y * math.sin(W))) - (math.cos(W) * (drone_pose.pose.position.x * math.sin(W) - drone_pose.pose.position.y * math.cos(W))) + (cords[0] * math.sin(W) + cords[1] * math.cos(W))
     print (W, X, Y)
-    # glob_cords = np.dot(cords, matrix_transform)
-    # X = glob_cords[0]
-    # Y = glob_cords[1]
     return X, Y
 
 
@@ -151,7 +152,7 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
         cv.imshow('Blur', hsv)
 
     # делаем бинаризацию картинки и пихаем её в переменную mask
-    detect_obj.mask = cv.inRange(hsv, ValMinBGR, ValMaxBGR)              #OrangeMinBGR, OrangeMaxBGR
+    detect_obj.mask = cv.inRange(hsv, ValMinBGR, ValMaxBGR)
     # cv.imshow('mask', mask)
 
     # Уменьшаем контуры белых объектов - делаем две итерации
@@ -165,7 +166,7 @@ def contour_finder(frame, ValMinBGR, ValMaxBGR):
         cv.imshow('Dilate', detect_obj.mask)
 
     # ищем контуры в результирующем кадре
-    contours = cv.findContours(detect_obj.mask, cv.RETR_TREE , cv.CHAIN_APPROX_NONE)         # cv.RETR_TREE
+    contours = cv.findContours(detect_obj.mask, cv.RETR_TREE , cv.CHAIN_APPROX_NONE)
 
     # вычленяем массив контуров из переменной contours и переинициализируем переменную contours
     contours = contours[1]
@@ -197,13 +198,14 @@ def land():
 
 # основная функция
 def main():
+
     global landing_flag
     rospy.init_node('cv_camera_capture') # инициальизируем данную ноду с именем cv_camera_capture
     bridge = CvBridge()
 
     # инициализируем подписку на топик
-    rospy.Subscriber(drone_pose_topic, PoseStamped, call_back_Drone_Pose)
-    rospy.Subscriber(alt_topic, Float32, call_back_Drone_Alt)
+    rospy.Subscriber(drone_pose_topic, PoseStamped, drone_pose_cb)
+    rospy.Subscriber(alt_topic, Float32, drone_alt_cb)
 
     global goal_pose_pub
     goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size = 10)
@@ -231,12 +233,12 @@ def main():
 
 
         # читаем флаг подключения камеры и картинку с камеры
-        ret, frame = cap.read()
+        ret_down, frame_down = cap1.read()
         # делаем копию кадра
-        copy_frame = frame.copy()
+        copy_frame = frame_down.copy()
 
 
-        if ret:
+        if ret_down:
 
             if camera_server_flag:
                 # рисуем окружность в центре кадра камеры
@@ -247,14 +249,14 @@ def main():
                 camera_server_pub.publish(image_message)
 
             global point_land_green, point_land_blue
-            # cv.imshow("frame", frame)
+            # cv.imshow("frame_down", frame_down)
             # получаем бъект контура по указанному интервалу цвета
-            point_land_blue = contour_finder(frame, BLUE_MIN_BGR, BLUE_MAX_BGR)
+            point_land_blue = contour_finder(frame_down, BLUE_MIN_BGR, BLUE_MAX_BGR)
             # print(point_land_blue.cords)
             # cv.imshow("point_blue", point_land_blue.mask)
 
             # получаем бъект контура по указанному интервалу цвета
-            point_land_green = contour_finder(frame, GREEN_MIN_BGR, GREEN_MAX_BGR)
+            point_land_green = contour_finder(frame_down, GREEN_MIN_BGR, GREEN_MAX_BGR)
             # print(point_land_green.cords)
             # cv.imshow("point_green", point_land_green.mask)
 
@@ -283,11 +285,11 @@ def main():
                 print("LANDING!")
                 try:
                     # вычисляем локальные координаты метки в кадре камеры(измерение в пиксельных единицах!!!!)
-                    X = (point_land_green.cords[0] + (point_land_green.cords[2] / 2)) - len(frame[0]) / 2
-                    Y = - ((point_land_green.cords[1] + (point_land_green.cords[3] / 2)) - len(frame) / 2)
+                    X = (point_land_green.cords[0] + (point_land_green.cords[2] / 2)) - len(frame_down[0]) / 2
+                    Y = - ((point_land_green.cords[1] + (point_land_green.cords[3] / 2)) - len(frame_down) / 2)
 
                      # считаем локальные координаты точки посадки в метрах(значения 21.8 и 16.1 это есть углы обзора камеры найденные экспериментальным путем)
-                    glob_transform_cords = np.array([math.tan((32.3 / (len(frame[0])/2)) * (math.pi / 180.0) * float(X)) * drone_alt, math.tan((19.5 / (len(frame)/2)) * (math.pi / 180.0) * float(Y)) * drone_alt, 0.0])
+                    glob_transform_cords = np.array([math.tan((32.3 / (len(frame_down[0])/2)) * (math.pi / 180.0) * float(X)) * drone_alt, math.tan((19.5 / (len(frame_down)/2)) * (math.pi / 180.0) * float(Y)) * drone_alt, 0.0])
 
                      # считаем углы поворота дрона из кватерниона в углы эйлера
                     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
@@ -322,6 +324,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-    cap.release()
+    cap1.release()
     cv.destroyAllWindows()
 
