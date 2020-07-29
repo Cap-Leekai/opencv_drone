@@ -1,28 +1,41 @@
 #!/usr/bin/env python
 #coding=utf8
 
+import rospy
 import cv2 as cv
 
-cap = cv.VideoCapture("/dev/video2") # "/dev/video0"
-cap.set(cv.CAP_PROP_FPS, 24) # Частота кадров
-cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920) # Ширина кадров в видеопотоке.       # 1280, 960
-cap.set(cv.CAP_PROP_FRAME_HEIGHT, 1080) # Высота кадров в видеопотоке.
 
-while True:
-
-    ret, frame = cap.read()
+from cv_bridge import CvBridge
+from sensor_msgs.msg import Image
 
 
-    if ret:
-        # frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-        cv.imshow("hnya", frame)
-        print(len(frame[0]), len(frame))
-        #print(result)
-        if cv.waitKey(1) == 27: # проверяем была ли нажата кнопка esc
+ros_image_forward = Image()
+
+
+def img_cb(data):
+    global ros_image_forward
+    ros_image_forward = data
+
+
+def main():
+    global cv_image
+
+    rospy.init_node('camera_frame_test')
+    bridge = CvBridge()
+    rospy.Subscriber('/mono_cam_forward/camera_mono/image_raw', Image, img_cb)
+
+    while not rospy.is_shutdown():
+        try:
+            cv_image_forward = bridge.imgmsg_to_cv2(ros_image_forward, "bgr8")
+            cv.imshow("hren", cv_image_forward)
+
+        except:
+            print("FAIL")
+
+        if cv.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
             break
-    else:
-        print("Camera not found!")
-        break
 
-cap.release()
-cv.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
+    cv.destroyAllWindows()

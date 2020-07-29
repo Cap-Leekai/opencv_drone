@@ -1,0 +1,5 @@
+<launch>
+
+<node pkg="opencv_drone" type="cv_detector_point_land.py" name="point_land_node"/>
+
+</launch>
