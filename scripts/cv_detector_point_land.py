@@ -6,6 +6,7 @@ import cv2 as cv
 import numpy as np
 import math
 import tf
+import os
 
 
 from cv_bridge import CvBridge
@@ -45,7 +46,7 @@ POINT_LAND_MAX_GREEN = (0, 255, 255)
 
 
 # флаги
-view_window_flag = True   # фдаг отображения окон с результатами обработки изображений сделано для отладки
+view_window_flag = False   # фдаг отображения окон с результатами обработки изображений сделано для отладки
 landing_flag = False        # флаг посадки
 camera_server_flag = False
 
@@ -70,8 +71,8 @@ logotip_img = 'logotip.png'
 alt_topic = "/drone/alt"                                        # топик текущей высоты
 drone_pose_topic = "/mavros/local_position/pose"                # топик текущей позиции
 drone_goal_pose = "/goal_pose"                                  # топик целевой точки
-camera_forward_topic = '/mono_cam_down/camera_mono/image_raw'   # топик нижней камеры
-camera_down_topic = '/mono_cam_forward/camera_mono/image_raw'   # топик передней камеры
+# camera_forward_topic = '/mono_cam_forward/camera_mono/image_raw'  # топик нижней камеры
+camera_down_topic = "/mono_cam_down/camera_mono/image_raw"   # топик передней камеры
 
 # # делаем захват видео с камеры в переменную cap
 # cap1 = cv.VideoCapture(camera_file_port)  # stereo elp >> /dev/video2, /dev/video4
@@ -88,7 +89,7 @@ camera_down_topic = '/mono_cam_forward/camera_mono/image_raw'   # топик п�
 def frame_down_cb(data):
     global ros_img_down
     ros_img_down = data
-
+    # print("Readed!")
 
 # функция считывания текущего положения дрона
 def drone_pose_cb(data):
@@ -240,8 +241,9 @@ def main():
 
 
     # считываем и бинаризуем все метки детектирования
-    point_land = cv.imread(point_of_land_img)
-
+    point_land = cv.imread(os.path.abspath(point_of_land_img))                                    #os.path.abspath(point_of_land_img)
+    # print(os.path.abspath(point_of_land_img))
+    # cv.imshow("check", point_land)
 
     point_land_mask_blue = cv.inRange(point_land, POINT_LAND_MIN_BLUE, POINT_LAND_MAX_BLUE)
     point_land_mask_blue = cv.resize(point_land_mask_blue, max_resize)
@@ -254,7 +256,7 @@ def main():
 
 
     while not rospy.is_shutdown():
-
+        # global cv_img_down
         try:
             cv_img_down = bridge.imgmsg_to_cv2(ros_img_down, "bgr8")
             # cv_img_forward = bridge.imgmsg_to_cv2(ros_img_forward, "bgr8")

@@ -18,11 +18,11 @@ def img_cb(data):
 
 
 def main():
-    global cv_image
+    # global cv_image
 
     rospy.init_node('camera_frame_test')
     bridge = CvBridge()
-    rospy.Subscriber('/mono_cam_forward/camera_mono/image_raw', Image, img_cb)
+    rospy.Subscriber('/mono_cam_down/camera_mono/image_raw', Image, img_cb)
 
     while not rospy.is_shutdown():
         try:
