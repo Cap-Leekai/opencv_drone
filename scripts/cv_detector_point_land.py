@@ -262,6 +262,7 @@ def detector_of_obj():
             potential_logotype = contour_finder(cv_img_down, LOGOTYPE_MIN, LOGOTYPE_MAX)
             print(potential_logotype.cords)
 
+
 # основная функция
 def main():
 
