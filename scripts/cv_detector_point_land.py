@@ -67,7 +67,7 @@ max_resize = (64, 64)       # задаем максимальный размер
 ros_img_forward = Image()   # картинка с передней камеры в формате ROS Image
 ros_img_down = Image()      # картинка с нижней камеры в формате ROS Image
 detect_val = 0              # счетчик найденых объектов
-
+objects_list = ()           # список координат объектов
 
 # названия путей
 point_of_land_img = 'land_point_blue.png'
