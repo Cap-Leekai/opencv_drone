@@ -281,11 +281,11 @@ def main():
     hz = rospy.Rate(20)
 
     # инициализируем все переменные хранящие маски детектируемых картинок из памяти
-    global point_land_mask_blue, point_land_mask_green, logotip_img_mask
+    global point_land_mask_blue, point_land_mask_green, logotype_img_mask
 
     # считываем и бинаризуем все метки детектирования
     point_land = cv.imread(os.path.abspath(point_of_land_img))                                    #os.path.abspath(point_of_land_img)
-    logotip = cv.imread(os.path.abspath(logotip_img))
+    logotype = cv.imread(os.path.abspath(logotip_img))
 
     # print(os.path.abspath(point_of_land_img))
     # cv.imshow("check", point_land)
@@ -300,8 +300,8 @@ def main():
 #    cv.imshow('cut_bin_green', point_land_mask_green)
 
 
-    logotip_img_mask = cv.inRange(logotip, LOGOTIP_IMG_MIN, LOGOTIP_IMG_MAX)
-    logotip_img_mask = cv.resize(logotip_img_mask, max_resize)
+    logotype_img_mask = cv.inRange(logotype, LOGOTIP_IMG_MIN, LOGOTIP_IMG_MAX)
+    logotype_img_mask = cv.resize(logotype_img_mask, max_resize)
 
     while not rospy.is_shutdown():
         global cv_img_down, cv_img_forward
