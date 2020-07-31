@@ -49,14 +49,17 @@ LOGOTIP_IMG_MIN = (0, 0, 0)
 LOGOTIP_IMG_MAX = (103, 255, 255)
 
 
-LOGOTYPE_MIN = (0, 0, 0)
-LOGOTYPE_MAX = (0, 0, 0)
+LOGOTYPE_MIN_FORWARD_CAM = (0, 0, 0)
+LOGOTYPE_MAX_FORWARD_CAM = (0, 0, 0)
+
+
+LOGOTYPE_MIN_DOWN_CAM = (0, 0, 0)
+LOGOTYPE_MAX_DOWN_CAM = (0, 0, 0)
 
 
 # флаги
-view_window_flag = False   # фдаг отображения окон с результатами обработки изображений сделано для отладки
+view_window_flag = False    # фдаг отображения окон с результатами обработки изображений сделано для отладки
 landing_flag = False        # флаг посадки
-camera_server_flag = False
 
 
 # переменные
@@ -221,7 +224,7 @@ def land():
     goal_pose_pub.publish(goal_point)
 
 
-# функция коррекции положения дрона относительно сдетектированной метки/объекта предназначен для НИЖНЕЙ камеры
+# функция коррекции положения дрона относительно сдетектированного маркера/объекта предназначен для НИЖНЕЙ камеры
 def corector_pose(marker_obj):
     # вычисляем локальные координаты метки в кадре камеры(измерение в пиксельных единицах!!!!)
     X = (marker_obj.cords[0] + (marker_obj.cords[2] / 2)) - len(cv_img_down[0]) / 2
@@ -235,8 +238,7 @@ def corector_pose(marker_obj):
     # считаем углы поворота дрона из кватерниона в углы эйлера
     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
 
-    glob_X, glob_Y = transform_cord(yaw,
-                                    glob_transform_cords)  # пересчитываем найденные локальные координаты в глобальные
+    glob_X, glob_Y = transform_cord(yaw, glob_transform_cords)  # пересчитываем найденные локальные координаты в глобальные
     print ("X = %s, Y = %s, Z = %s" % (glob_X, glob_Y, drone_alt))
     goal_point.pose.course = yaw
     goal_point.pose.point.x = glob_X
@@ -259,8 +261,8 @@ def detector_of_obj():
             goal_pose_pub.publish(goal_point)
 
         else:
-            potential_logotype = contour_finder(cv_img_down, LOGOTYPE_MIN, LOGOTYPE_MAX)
-            print(potential_logotype.cords)
+            potential_logotype_forward = contour_finder(cv_img_down, LOGOTYPE_MIN_FORWARD_CAM, LOGOTYPE_MAX_FORWARD_CAM)
+            print(potential_logotype_forward.cords)
 
 
 # основная функция
@@ -307,6 +309,9 @@ def main():
     while not rospy.is_shutdown():
         global cv_img_down, cv_img_forward
         try:
+            ##################################
+            #  ИНИЦИАЛИЗАЦИЯ КАДРОВ С КАМЕР  #
+            ##################################
             cv_img_down = bridge.imgmsg_to_cv2(ros_img_down, "bgr8")
             cv_img_forward = bridge.imgmsg_to_cv2(ros_img_forward, "bgr8")
 
@@ -321,6 +326,29 @@ def main():
             copy_frame = cv_img_down.copy()         # !!! ПЕРЕПИСАТЬ скорее всего не нужен!!!!!
 
 
+            ##################################################
+            # ДЕТЕКТИРОВАНИЕ МАРКЕРА ЛОГОТИПА НИЖНЕЙ КАМЕРОЙ #
+            ##################################################
+            global potential_logotype_down
+
+            # получаем объект контура по указанному интервалу цвета
+            potential_logotype_down = contour_finder(cv_img_down,
+                                                     LOGOTYPE_MIN_DOWN_CAM,
+                                                     LOGOTYPE_MAX_DOWN_CAM)
+
+            # сравниваем маски с камеры и маску сделанную из файлов
+            similarity_marker_logotype = detect_marker(cut_contour(cv_img_down,
+                                                                   point_land_blue.cords,
+                                                                   LOGOTYPE_MIN_DOWN_CAM,
+                                                                   LOGOTYPE_MAX_DOWN_CAM),
+                                                                   point_land_mask_blue)
+
+            # print("SIMILARITY_MARKER_LOGOTYPE Найдено сходств %s, найдено различий %s" % similarity_marker_logotype)
+
+
+            ##################################
+            # ДЕТЕКТИРОВАНИЕ МАРКЕРА ПОСАДКИ #
+            ##################################
             global point_land_green, point_land_blue
             # cv.imshow("cv_img_down", cv_img_down)
             # получаем объект контура по указанному интервалу цвета
@@ -334,18 +362,14 @@ def main():
             # cv.imshow("point_green", point_land_green.mask)
 
             # сравниваем маски с камеры и маску сделанную из файлов
-            marker_blue = detect_marker(cut_contour(copy_frame, point_land_blue.cords, POINT_LAND_BLUE_MIN_BGR, POINT_LAND_BLUE_MAX_BGR),
+            similarity_marker_blue = detect_marker(cut_contour(copy_frame, point_land_blue.cords, POINT_LAND_BLUE_MIN_BGR, POINT_LAND_BLUE_MAX_BGR),
                                         point_land_mask_blue)
-            marker_green = detect_marker(cut_contour(copy_frame, point_land_blue.cords, POINT_LAND_GREEN_MIN_BGR, POINT_LAND_GREEN_MAX_BGR),
+            similarity_marker_green = detect_marker(cut_contour(copy_frame, point_land_blue.cords, POINT_LAND_GREEN_MIN_BGR, POINT_LAND_GREEN_MAX_BGR),
                                          point_land_mask_green)
-
-
-                # print("BLUE Найдено сходств %s, найдено различий %s" % marker_blue)
-                # print("Green Найдено сходств %s, найдено различий %s" %  marker_green )
-
-
+            # print("SIMILARITY_MARKER_BLUE Найдено сходств %s, найдено различий %s" % similarity_marker_blue)
+            # print("SIMILARITY_MARKER_GREEN Найдено сходств %s, найдено различий %s" %  similarity_marker_green )
             # проверяем сходство детектырованных масок и масок картинок зашитых в файл с проектом
-            if marker_blue[0] - marker_blue[1] > 2900 and marker_green[0] - marker_green[1] > 2900:
+            if similarity_marker_blue[0] - similarity_marker_blue[1] > 2900 and similarity_marker_green[0] - similarity_marker_green[1] > 2900:
                 print("marker of land True ")
                 landing_flag = True
 
@@ -357,7 +381,6 @@ def main():
                 print("LANDING!")
                 try:
                     corector_pose(point_land_green)
-
                     if abs(goal_point.pose.point.x - drone_pose.pose.position.x) < 0.1 and abs(goal_point.pose.point.y - drone_pose.pose.position.y) < 0.1:
                         if goal_point.pose.point.z > 0.0:
                             land()

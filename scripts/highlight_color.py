@@ -8,7 +8,7 @@ def nothing(x):
     pass
 
     #делаем захват видео с камеры в переменную cap
-cap = cv.VideoCapture("/dev/video4")    #stereo elp >> /dev/video2, /dev/video4
+cap = cv.VideoCapture("/dev/video2")    #stereo elp >> /dev/video2, /dev/video4
 cap.set(cv.CAP_PROP_FPS, 24) # Частота кадров
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 640) # Ширина кадров в видеопотоке.
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 360) # Высота кадров в видеопотоке.
