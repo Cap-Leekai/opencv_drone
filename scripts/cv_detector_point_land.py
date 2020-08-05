@@ -73,7 +73,7 @@ detect_val = 0              # счетчик найденых объектов
 objects_list = ()           # список координат объектов
 
 # названия путей
-point_of_land_img = 'land_point_blue.png'
+point_of_land_img = "land_point_blue.png"
 logotip_img = 'logotip.png'
 
 # camera_file_port = "/dev/video4"
@@ -289,7 +289,7 @@ def main():
     # считываем и бинаризуем все метки детектирования
     point_land = cv.imread(os.path.abspath(point_of_land_img))                                    #os.path.abspath(point_of_land_img)
     logotype = cv.imread(os.path.abspath(logotip_img))
-
+    print(type(point_land))
     # print(os.path.abspath(point_of_land_img))
     # cv.imshow("check", point_land)
 
