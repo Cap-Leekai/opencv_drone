@@ -9,7 +9,7 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 
 
-camera_file_port = "/dev/video4"
+camera_file_port = "/dev/video2"
 
 ros_image_forward = Image()
 ros_image_down = Image()

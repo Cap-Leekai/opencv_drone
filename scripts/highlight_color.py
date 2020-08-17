@@ -8,10 +8,10 @@ def nothing(x):
     pass
 
     #делаем захват видео с камеры в переменную cap
-cap = cv.VideoCapture("/dev/video0")    #stereo elp >> /dev/video2, /dev/video4
-cap.set(cv.CAP_PROP_FPS, 24) # Частота кадров
-cap.set(cv.CAP_PROP_FRAME_WIDTH, 640) # Ширина кадров в видеопотоке.
-cap.set(cv.CAP_PROP_FRAME_HEIGHT, 360) # Высота кадров в видеопотоке.
+cap = cv.VideoCapture("passing_gazebo_green.mp4")    #stereo elp >> /dev/video2, /dev/video4
+# cap.set(cv.CAP_PROP_FPS, 24) # Частота кадров
+# cap.set(cv.CAP_PROP_FRAME_WIDTH, 640) # Ширина кадров в видеопотоке.
+# cap.set(cv.CAP_PROP_FRAME_HEIGHT, 360) # Высота кадров в видеопотоке.
 
     #создам пустое окно с именем result
 cv.namedWindow('result')
@@ -25,7 +25,7 @@ cv.createTrackbar('maxb', 'result', 0, 255, nothing)
 cv.createTrackbar('maxg', 'result', 0, 255, nothing)
 cv.createTrackbar('maxr', 'result', 0, 255, nothing)
 
-# color = cv.imread('logotip.png')
+# color = cv.imread('11.png')
 # cv.imshow('color', color)
 
 while(True):
@@ -36,11 +36,10 @@ while(True):
     # ret = True
     # frame = color
 
-
-    #проверяем есть ли соединение с камерой
+    # проверяем есть ли соединение с камерой
     if ret:
 
-        #переводим картинку с камеры из формата BGR в HSV
+        # переводим картинку с камеры из формата BGR в HSV
         # hsv = frame
         hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
         #cv.imshow('frame', hsv) #выводим картинку с камеры в формате HSV на экран
