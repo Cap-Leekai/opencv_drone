@@ -41,12 +41,73 @@ def depth_image_cb(data):
 
         image_binary = np.zeros_like(depth_frame)
         # делаем маску из допустимых пикселей на основе условия
-        image_binary[(depth_frame > 0.8)] = 255
+        image_binary[(depth_frame < 5.)] = 255
         image_binary = np.uint8(image_binary)
 
         # cv.imshow("depth", image_binary)
     except CvBridgeError as e:
         print "Error read depth image"
+
+
+# функция детектирования углов рамки
+def frame_corners_detector():
+    """
+    return cords of corners
+    """
+    zeroes_image = np.zeros_like(image_binary)
+
+    rgb_image_copy = rgb_image.copy()
+
+    try:
+        rgb_integrate = cv.bitwise_and(rgb_image, rgb_image, mask=image_binary)
+
+        hsv_image = cv.cvtColor(rgb_integrate, cv.COLOR_BGR2HSV)
+
+        # делаем бинаризацию картинки
+        image_mask = cv.inRange(hsv_image, (46, 127, 0), (255, 255, 255))
+
+        # находим контуры
+        contours, hierarchy = cv.findContours(image_mask, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+
+        # сортируем контуры
+        contours = sorted(contours, key=cv.contourArea, reverse=True)
+
+        cv.drawContours(zeroes_image, contours[0], -1, 255, 5)
+
+        # Уменьшаем контуры белых объектов - делаем 2 итераций
+        zeroes_image = cv.erode(zeroes_image, None, iterations=2)
+
+        # cv.imshow("zeroes_image", zeroes_image)
+
+        # Show Features to Track
+        gray = zeroes_image.copy()
+        # ищем хорошие точки для трекинга в углах рамки
+        corners = cv.goodFeaturesToTrack(gray, 4, 0.01, 10)
+        corners = np.int0(corners)
+        print corners
+
+
+        # for i in corners:
+        #     x, y = i.ravel()
+        #     cv.circle(gray, (x, y), 3, 255, -1)
+        #
+        # cv.imshow('Gray', gray)
+        #
+        # # рисуем маркеры в найденых точках
+        # for i in corners:
+        #     cv.drawMarker(rgb_image_copy, tuple(i.ravel()), (0, 255, 0), markerType=cv.MARKER_TILTED_CROSS, thickness=2,
+        #                   markerSize=50)
+        #
+        # cv.imshow("test", rgb_image_copy)
+
+        if corners is not None:
+            return corners
+
+        else:
+            return None
+
+    except:
+        print "detect frame error"
 
 
 def main():
@@ -61,58 +122,15 @@ def main():
 
     while not rospy.is_shutdown():
 
-        if image_binary is not None:
+        if image_binary is not None and depth_frame is not None:
+            frame_corners_detector()
 
-            zeroes_image = np.zeros_like(image_binary)
-
-            try:
-                rgb_image_copy = rgb_image.copy()
-                rgb_integrate = cv.bitwise_and(rgb_image, rgb_image, mask = image_binary)
-
-                hsv_image = cv.cvtColor(rgb_integrate, cv.COLOR_BGR2HSV)
-
-                # делаем бинаризацию картинки
-                image_mask = cv.inRange(hsv_image, (46, 127, 0), (255, 255, 255))
-
-                # находим контуры
-                contours, hierarchy = cv.findContours(image_mask, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
-
-                # print len(contours)
-
-                # сортируем контуры
-                contours = sorted(contours, key=cv.contourArea, reverse=True)
-
-                cv.drawContours(zeroes_image, contours[0], -1, 255, 5)
-
-                # Уменьшаем контуры белых объектов - делаем 2 итераций
-                zeroes_image = cv.erode(zeroes_image, None, iterations=2)
-
-                # cv.imshow("zeroes_image", zeroes_image)
-
-                # Show Features to Track
-                gray = zeroes_image.copy()
-                # ищем хорошие точки для трекинга в углах рамки
-                corners = cv.goodFeaturesToTrack(gray, 4, 0.01, 10)
-                corners = np.int0(corners)
-
-                for i in corners:
-                    x, y = i.ravel()
-                    cv.circle(gray, (x, y), 3, 255, -1)
-
-                cv.imshow('Gray', gray)
-
-                # рисуем маркеры в найденых точках
-                for i in corners:
-                    cv.drawMarker(rgb_image_copy, tuple(i.ravel()), (0, 255, 0), markerType=cv.MARKER_TILTED_CROSS,thickness=2, markerSize=50)
-
-                cv.imshow("test", rgb_image_copy)
-
-            except:
-                print "good game!"
         else:
             print "image is not read"
 
         if cv.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
             break
+
+# начало исполнения кода
 if __name__ == "__main__":
     main()
