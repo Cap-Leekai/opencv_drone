@@ -152,7 +152,7 @@ def main():
             # вычленяем массив контуров из переменной contours
             # cv.drawContours(cv_img, contours, -1, (0, 180, 255), 1)
             cv.rectangle(cv_img, (cords_of_rect[0], cords_of_rect[1]), (cords_of_rect[0] + cords_of_rect[2], cords_of_rect[1] + cords_of_rect[3]), (255, 0, 0), 1)                  # возвращает кортеж в формате  (x, y, w, h)
-            cv.circle(cv_img, ((cords_of_rect[0] + cords_of_rect[2] // 2) , (cords_of_rect[1] + cords_of_rect[3] // 2) )  , 10, (0, 255, 0), -10)
+            cv.circle(cv_img, ((cords_of_rect[0] + cords_of_rect[2] // 2) , (cords_of_rect[1] + cords_of_rect[3] // 2) ), 10, (0, 255, 0), -10)
 
             LIST = recalculation_cords(AllBinary)
 
@@ -175,12 +175,12 @@ def main():
 
             goal_pose.pose.point.x = x_glob
             goal_pose.pose.point.y = y_glob
-            goal_pose.pose.point.z = drone_alt
+            goal_pose.pose.point.z = 2.0
 
             # целевой курс в goal_pose -> yaw + math.atan2( -(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), 320)
             goal_pose.pose.course = yaw + math.atan2(-(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), cv_img.shape[1] // 2)
             goal_pose_pub.publish(goal_pose)
-
+            #
             cv.imshow("test_test", allbinary_copy)
 
         except:
