@@ -87,18 +87,18 @@ def frame_corners_detector():
         print corners
 
 
-        # for i in corners:
-        #     x, y = i.ravel()
-        #     cv.circle(gray, (x, y), 3, 255, -1)
-        #
-        # cv.imshow('Gray', gray)
-        #
-        # # рисуем маркеры в найденых точках
-        # for i in corners:
-        #     cv.drawMarker(rgb_image_copy, tuple(i.ravel()), (0, 255, 0), markerType=cv.MARKER_TILTED_CROSS, thickness=2,
-        #                   markerSize=50)
-        #
-        # cv.imshow("test", rgb_image_copy)
+        for i in corners:
+            x, y = i.ravel()
+            cv.circle(gray, (x, y), 3, 255, -1)
+
+        cv.imshow('Gray', gray)
+
+        # рисуем маркеры в найденых точках
+        for i in corners:
+            cv.drawMarker(rgb_image_copy, tuple(i.ravel()), (0, 255, 0), markerType=cv.MARKER_TILTED_CROSS, thickness=2,
+                          markerSize=50)
+
+        cv.imshow("test", rgb_image_copy)
 
         if corners is not None:
             return corners
