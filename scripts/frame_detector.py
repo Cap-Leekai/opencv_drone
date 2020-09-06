@@ -13,15 +13,16 @@ import time
 
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
-from stereo_msgs.msg import DisparityImage
-
+from opencv_drone.msg import frame_detect
 
 depth_image_topic = "/r200/depth/image_raw"
 image_topic = "/r200/image_raw"
-
+frame_detect_topic = "/frame_detector"
 
 depth_frame = None
 image_binary = None
+frame_detect_flag = frame_detect()
+
 
 # callback считывания картинки с realsence в rgb
 def rgb_image_cb(data):
@@ -41,7 +42,7 @@ def depth_image_cb(data):
 
         image_binary = np.zeros_like(depth_frame)
         # делаем маску из допустимых пикселей на основе условия
-        image_binary[(depth_frame < 5.)] = 255
+        image_binary[(depth_frame < 5.) & (depth_frame > 2.7)] = 255
         image_binary = np.uint8(image_binary)
 
         # cv.imshow("depth", image_binary)
@@ -51,6 +52,7 @@ def depth_image_cb(data):
 
 # функция детектирования углов рамки
 def frame_corners_detector():
+    global detect_frame_publisher
     """
     return cords of corners
     """
@@ -59,59 +61,67 @@ def frame_corners_detector():
     rgb_image_copy = rgb_image.copy()
 
     try:
-        rgb_integrate = cv.bitwise_and(rgb_image, rgb_image, mask=image_binary)
+        if rgb_image is not None:
+            rgb_integrate = cv.bitwise_and(rgb_image, rgb_image, mask=image_binary)
 
-        hsv_image = cv.cvtColor(rgb_integrate, cv.COLOR_BGR2HSV)
+            hsv_image = cv.cvtColor(rgb_integrate, cv.COLOR_BGR2HSV)
 
-        # делаем бинаризацию картинки
-        image_mask = cv.inRange(hsv_image, (46, 127, 0), (255, 255, 255))
+            # делаем бинаризацию картинки
+            image_mask = cv.inRange(hsv_image, (46, 127, 0), (255, 255, 255))
 
-        # находим контуры
-        contours, hierarchy = cv.findContours(image_mask, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+            # находим контуры
+            contours, hierarchy = cv.findContours(image_mask, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
 
-        # сортируем контуры
-        contours = sorted(contours, key=cv.contourArea, reverse=True)
+            # сортируем контуры
+            contours = sorted(contours, key=cv.contourArea, reverse=True)
 
-        cv.drawContours(zeroes_image, contours[0], -1, 255, 5)
+            cv.drawContours(zeroes_image, contours[0], -1, 255, 5)
 
-        # Уменьшаем контуры белых объектов - делаем 2 итераций
-        zeroes_image = cv.erode(zeroes_image, None, iterations=2)
+            # Уменьшаем контуры белых объектов - делаем 2 итераций
+            zeroes_image = cv.erode(zeroes_image, None, iterations=2)
 
-        # cv.imshow("zeroes_image", zeroes_image)
+            # cv.imshow("zeroes_image", zeroes_image)
 
-        # Show Features to Track
-        gray = zeroes_image.copy()
-        # ищем хорошие точки для трекинга в углах рамки
-        corners = cv.goodFeaturesToTrack(gray, 4, 0.01, 10)
-        corners = np.int0(corners)
-        print corners
+            # Show Features to Track
+            gray = zeroes_image.copy()
+            # ищем хорошие точки для трекинга в углах рамки
+            corners = cv.goodFeaturesToTrack(gray, 4, 0.01, 10)
+            corners = np.int0(corners)
+            # print corners
+            if cv.contourArea(contours[0]) > 25000.:
+                print "Detect frame"
+                frame_detect_flag.detect_frame = True
+                detect_frame_publisher.publish(frame_detect_flag)
+            else:
+                frame_detect_flag.detect_frame = False
+                detect_frame_publisher.publish(frame_detect_flag)
 
+            # for i in corners:
+            #     x, y = i.ravel()
+            #     cv.circle(gray, (x, y), 3, 255, -1)
+            #
+            # cv.imshow('Gray', gray)
+            #
+            # # рисуем маркеры в найденых точках
+            # for i in corners:
+            #     cv.drawMarker(rgb_image_copy, tuple(i.ravel()), (0, 255, 0), markerType=cv.MARKER_TILTED_CROSS, thickness=2,
+            #                   markerSize=50)
+            #
+            # cv.imshow("test", rgb_image_copy)
 
-        for i in corners:
-            x, y = i.ravel()
-            cv.circle(gray, (x, y), 3, 255, -1)
+            if corners is not None:
+                return corners
 
-        cv.imshow('Gray', gray)
-
-        # рисуем маркеры в найденых точках
-        for i in corners:
-            cv.drawMarker(rgb_image_copy, tuple(i.ravel()), (0, 255, 0), markerType=cv.MARKER_TILTED_CROSS, thickness=2,
-                          markerSize=50)
-
-        cv.imshow("test", rgb_image_copy)
-
-        if corners is not None:
-            return corners
-
+            else:
+                return None
         else:
-            return None
-
+            print "Image not read"
     except:
         print "detect frame error"
 
 
 def main():
-    global depth_frame, image_binary, rgb_image
+    global depth_frame, image_binary, rgb_image, detect_frame_publisher
 
     rospy.init_node("Frame_detector_node")
 
@@ -119,11 +129,12 @@ def main():
     rospy.Subscriber(depth_image_topic, Image, depth_image_cb)
     rospy.Subscriber(image_topic, Image, rgb_image_cb)
 
+    detect_frame_publisher = rospy.Publisher(frame_detect_topic, frame_detect, queue_size = 10)
 
     while not rospy.is_shutdown():
 
         if image_binary is not None and depth_frame is not None:
-            frame_corners_detector()
+            corners = frame_corners_detector()
 
         else:
             print "image is not read"
