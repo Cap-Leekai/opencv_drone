@@ -35,10 +35,10 @@ detect_frame_flag = False
 
 def detect_frame_cb(data):
     global detect_frame_flag
-
-    if data.detect_frame:
-        detect_frame_flag = True
-        # print "FRAME!!!!!"
+    detect_frame_flag = data.detect_frame
+    # if data.detect_frame:
+    #     detect_frame_flag = True
+    #     # print "FRAME!!!!!"
     # else:
     #     detect_frame_flag = False
     #     print "NOT FRAME!!!!"
@@ -159,45 +159,49 @@ def main():
 
                 # НАХОДИМ КОНТУРЫ
                 contours, hierarchy = cv.findContours(AllBinary[:,AllBinary.shape[1] // 2 : AllBinary.shape[1]], cv.RETR_TREE, cv.CHAIN_APPROX_NONE)            # AllBinary[:,AllBinary.shape[1] // 2 : AllBinary.shape[1]]
-                # сортируем контуры
-                contours = sorted(contours, key = cv.contourArea, reverse = True)
 
-                cords_of_rect = cv.boundingRect(contours[0])
-                cords_of_rect = [cords_of_rect[0] + AllBinary.shape[1] // 2, cords_of_rect[1], cords_of_rect[2], cords_of_rect[3]]
+                if len(contours):
+                    # сортируем контуры
+                    contours = sorted(contours, key = cv.contourArea, reverse = True)
 
-                # вычленяем массив контуров из переменной contours
-                # cv.drawContours(cv_img, contours, -1, (0, 180, 255), 1)
-                cv.rectangle(cv_img, (cords_of_rect[0], cords_of_rect[1]), (cords_of_rect[0] + cords_of_rect[2], cords_of_rect[1] + cords_of_rect[3]), (255, 0, 0), 1)                  # возвращает кортеж в формате  (x, y, w, h)
-                cv.circle(cv_img, ((cords_of_rect[0] + cords_of_rect[2] // 2) , (cords_of_rect[1] + cords_of_rect[3] // 2) ), 10, (0, 255, 0), -10)
+                    cords_of_rect = cv.boundingRect(contours[0])
+                    cords_of_rect = [cords_of_rect[0] + AllBinary.shape[1] // 2, cords_of_rect[1], cords_of_rect[2], cords_of_rect[3]]
 
-                LIST = recalculation_cords(AllBinary)
+                    # вычленяем массив контуров из переменной contours
+                    # cv.drawContours(cv_img, contours, -1, (0, 180, 255), 1)
+                    cv.rectangle(cv_img, (cords_of_rect[0], cords_of_rect[1]), (cords_of_rect[0] + cords_of_rect[2], cords_of_rect[1] + cords_of_rect[3]), (255, 0, 0), 1)                  # возвращает кортеж в формате  (x, y, w, h)
+                    cv.circle(cv_img, ((cords_of_rect[0] + cords_of_rect[2] // 2) , (cords_of_rect[1] + cords_of_rect[3] // 2) ), 10, (0, 255, 0), -10)
 
-                sm_pix_y = float(-(cords_of_rect[1] + cords_of_rect[3] // 2) + midpoint_y)          # вычисляем смещение от центра кадра в пикселях по y
-                sm_pix_x = float((cords_of_rect[0] + cords_of_rect[2] // 2) - midpoint_x)           # вычисляем смещение от центра кадра в пикселях по x
+                    LIST = recalculation_cords(AllBinary)
 
-                # находим коэффициент пиксель на метр
-                pixel_on_meter = float((sum(LIST) // len(LIST))) // width_of_line
+                    sm_pix_y = float(-(cords_of_rect[1] + cords_of_rect[3] // 2) + midpoint_y)          # вычисляем смещение от центра кадра в пикселях по y
+                    sm_pix_x = float((cords_of_rect[0] + cords_of_rect[2] // 2) - midpoint_x)           # вычисляем смещение от центра кадра в пикселях по x
 
-                # находим координаты целевой точки в локальной системе координат
-                correct_y = sm_pix_y / pixel_on_meter
-                correct_x = sm_pix_x / pixel_on_meter
+                    # находим коэффициент пиксель на метр
+                    pixel_on_meter = float((sum(LIST) // len(LIST))) // width_of_line
 
-                # отображаем линию масштаба - теоретически линия на кадре показывает МЕТР
-                cv.line(cv_img, (cv_img.shape[1], 0), (cv_img.shape[1], int(pixel_on_meter)), (255, 0, 255), 10)
-                # cv.imshow("Image", cv_img)
+                    # находим координаты целевой точки в локальной системе координат
+                    correct_y = sm_pix_y / pixel_on_meter
+                    correct_x = sm_pix_x / pixel_on_meter
 
-                # переводим кокальные координаты целевой точки в глобальные
-                x_glob, y_glob = transform_cord(yaw, (correct_x, correct_y))
+                    # отображаем линию масштаба - теоретически линия на кадре показывает МЕТР
+                    cv.line(cv_img, (cv_img.shape[1], 0), (cv_img.shape[1], int(pixel_on_meter)), (255, 0, 255), 10)
+                    # cv.imshow("Image", cv_img)
 
-                goal_pose.pose.point.x = x_glob
-                goal_pose.pose.point.y = y_glob
-                goal_pose.pose.point.z = 2.0
+                    # переводим кокальные координаты целевой точки в глобальные
+                    x_glob, y_glob = transform_cord(yaw, (correct_x, correct_y))
 
-                # целевой курс в goal_pose -> yaw + math.atan2( -(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), 320)
-                goal_pose.pose.course = yaw + math.atan2(-(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), cv_img.shape[1] // 2)
-                goal_pose_pub.publish(goal_pose)
-                #
-                # cv.imshow("test_test", allbinary_copy)
+                    goal_pose.pose.point.x = x_glob
+                    goal_pose.pose.point.y = y_glob
+                    goal_pose.pose.point.z = 1.6
+
+                    # целевой курс в goal_pose -> yaw + math.atan2( -(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), 320)
+                    goal_pose.pose.course = yaw + math.atan2(-(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), cv_img.shape[1] // 2)
+                    goal_pose_pub.publish(goal_pose)
+                    #
+                    # cv.imshow("test_test", allbinary_copy)
+                else:
+                    print "Need line"
             else:
                 print "STOP!"
 
