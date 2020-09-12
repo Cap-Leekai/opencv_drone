@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 #coding=utf8
 
-
 import cv2 as cv
 import numpy as np
 import rospy
@@ -10,6 +9,8 @@ import os
 import tf
 import math
 import time
+import dynamic_reconfigure.client
+
 
 from visualization_msgs.msg import Marker
 from cv_bridge import CvBridge, CvBridgeError
@@ -18,6 +19,8 @@ from opencv_drone.msg import frame_detect
 from std_msgs.msg import Float32
 from drone_msgs.msg import Goal
 from geometry_msgs.msg import PoseStamped, Quaternion, Point
+
+client = dynamic_reconfigure.client
 
 depth_image_topic = "/r200/depth/image_raw"
 image_topic = "/r200/image_raw"
@@ -42,7 +45,7 @@ drone_pose = PoseStamped()
 drone_alt = Float32()
 flag = True
 window_detect_flag = False
-
+use_unstable = True
 
 # классы для функции пролета в рамку
 class goal:
@@ -61,6 +64,10 @@ class pointsDrone:
         self.x = x
         self.y = y
         self.z = z
+
+
+def callback(config):
+    rospy.loginfo("Config set to {run}".format(**config))
 
 
 # функция считывания текущего положения дрона
@@ -111,7 +118,7 @@ def transform_cords_3D(X, Y, Z, roll, pitch, yaw, goal_):
 
     glob_cords_of_point = [glob_cords_of_point[0] + X, glob_cords_of_point[1] + Y, glob_cords_of_point[2] + Z]
 
-    print "glob_cords -> ", glob_cords_of_point
+    # print "glob_cords -> ", glob_cords_of_point
     return glob_cords_of_point
 
 # callback считывания картинки с realsence в rgb
@@ -138,7 +145,7 @@ def depth_image_cb(data):
 
         image_binary = np.zeros_like(depth_frame)
         # делаем маску из допустимых пикселей на основе условия
-        image_binary[(depth_frame < 4.9) & (depth_frame > 1.)] = 255
+        image_binary[(depth_frame < 4.5) & (depth_frame > 2.)] = 255
 
         image_binary = np.uint8(image_binary)
 
@@ -156,24 +163,47 @@ def calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height, widt
     d_min = min(dist)
     idx_min = list(dist).index(d_min)
 
-    # Считаем коэффициент пересчета числа пикселей на метр в кадре
-    k = l / math.sqrt(math.pow(pointsFrame.x[0]-pointsFrame.x[1], 2) + math.pow(pointsFrame.y[0]-pointsFrame.y[1], 2))
+    # print "d_min : " + str(d_min)
+    # print "idx_min : " + str(idx_min)
+
+    x1_min = 1000
+    x2_min = 1000
+    idx1_min = -1
+    idx2_min = -1
+    for i in range(0, 2):
+        if pointsFrame.x[i] < x1_min:
+            x1_min = pointsFrame.x[i]
+            idx1_min = i
+        elif pointsFrame.x[i] < x2_min:
+            x2_min = pointsFrame.x[i]
+            idx2_min = i
+
+    k = l / math.sqrt((pointsFrame.x[idx1_min] - pointsFrame.x[idx2_min]) ** 2 + (pointsFrame.y[idx1_min] - pointsFrame.y[idx2_min]) ** 2)
+
+    # print "k : " + str(k)
 
     # Считаем координаты точек рамки относительно дрона
-    x = [0 for x in range(0, len(dist))]
+    x = [0 for x in range(0, len(dist))]                              # [0.0, 0.0, 0.0, 0.0]
     y = [0 for y in range(0, len(dist))]
     z = [0 for z in range(0, len(dist))]
 
     for i in range(0, len(dist)):
-        d_norm = math.sqrt(math.pow((pointsFrame.x[i] - size_x / 2) * k, 2) + math.pow((pointsFrame.y[i] - size_y / 2) * k, 2) + math.pow(d_min, 2))
+        # print "pointsFrame.x[i] : " + pointsFrame.x[i]
+        # print "pointsFrame.y[i] : " + pointsFrame.y[i]
+        # print "size_x : " + size_x
+        # print "size_y : " + size_y
 
-        x[i] = d_min + (dist[i] / d_norm - 1)
+        d_norm = math.sqrt((((pointsFrame.x[i] - size_x / 2) * k ) ** 2) + (((pointsFrame.y[i] - size_y / 2) * k) ** 2) + d_min ** 2)
+
+        # print "d_norm : " + str(d_norm)
+
+        x[i] = d_min + (dist[i] / d_min - 1)
         y[i] = (size_x / 2 - pointsFrame.x[i]) * k * dist[i] / d_norm
-        z[i] = (pointsFrame.y[i] - size_y / 2) * k * dist[i] / d_norm
+        z[i] = (size_y / 2 - pointsFrame.y[i]) * k * dist[i] / d_norm
 
-    #print('x : ' + str(x))
-    #print('y : ' + str(y))
-    #print('z : ' + str(z))
+    # print('x : ' + str(x))
+    # print('y : ' + str(y))
+    # print('z : ' + str(z))
 
     pointsDrone_ = pointsDrone(x, y, z)
 
@@ -188,18 +218,18 @@ def calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height, widt
     ny = bx * az - bz * ax
     nz = ax * by - ay * bx
 
-    #print('nx : ' + str(nx))
-    #print('ny : ' + str(ny))
-    #print('nz : ' + str(nz))
+    # print('nx : ' + str(nx))
+    # print('ny : ' + str(ny))
+    # print('nz : ' + str(nz))
 
     # Находим координаты центра рамки
     x_c = math.fsum(pointsDrone_.x) / 4
     y_c = math.fsum(pointsDrone_.y) / 4
     z_c = math.fsum(pointsDrone_.z) / 4
 
-    #print('x_c : ' + str(x_c))
-    #print('y_c : ' + str(y_c))
-    #print('z_c : ' + str(z_c))
+    # print('x_c : ' + str(x_c))
+    # print('y_c : ' + str(y_c))
+    # print('z_c : ' + str(z_c))
 
     # Находим точку p, удаленную от центра рамки на величину 1,25*width к дрону по направлению нормали
     n_norm = math.sqrt(math.pow(nx, 2) + math.pow(ny, 2) + math.pow(nz, 2))
@@ -292,9 +322,11 @@ def frame_corners_detector():
             gray = zeroes_image.copy()
 
             # ищем хорошие точки для трекинга в углах рамки
-            corners = cv.goodFeaturesToTrack(gray, 4, 0.4, 10)             #corners = cv.goodFeaturesToTrack(gray, 4, 0.01, 10)
+            corners = cv.goodFeaturesToTrack(gray, 4, 0.4, 10)        #return [x:640, y:480]      #corners = cv.goodFeaturesToTrack(gray, 4, 0.01, 10)
             corners = np.int0(corners)
             corners = corners.reshape(4, -1)
+
+            #
 
             # print corners
             ###########################################
@@ -315,7 +347,7 @@ def frame_corners_detector():
 
             ###########################################
 
-            if cv.contourArea(contours[0]) > 20000. and corners is not None:
+            if cv.contourArea(contours[0]) > 30000. and corners is not None:
                 print "Detect frame"
                 window_detect_flag = True
                 frame_detect_flag.detect_frame = True
@@ -326,25 +358,22 @@ def frame_corners_detector():
                 size_x = rgb_image.shape[1]  # Размер кадра по х
                 size_y = rgb_image.shape[0]  # Размер кадра по у
 
-                pointsFrame.x = [corners[0][1],
+                pointsFrame.y = [corners[0][1],
                                  corners[1][1],
                                  corners[2][1],
                                  corners[3][1]]  # Координаты рамки в пикселях x       [1]
 
-                pointsFrame.y = [corners[0][0],
+                pointsFrame.x = [corners[0][0],
                                  corners[1][0],
                                  corners[2][0],
                                  corners[3][0]]  # Координаты рамки в пикселях y       [0]
 
-                # dist = [depth_frame_copy[corners[0][0]][corners[0][1]],
-                #         depth_frame_copy[corners[1][0]][corners[1][1]],
-                #         depth_frame_copy[corners[2][0]][corners[2][1]],
-                #         depth_frame_copy[corners[3][0]][corners[3][1]]]  # Дистанции до углов рамки от дрона
-
                 dist = np.array([depth_frame[corners[0][1]][corners[0][0]],
-                        depth_frame[corners[1][1]][corners[1][0]],
-                        depth_frame[corners[2][1]][corners[2][0]],
-                        depth_frame[corners[3][1]][corners[3][0]]])  # Дистанции до углов рамки от дрона
+                                 depth_frame[corners[1][1]][corners[1][0]],
+                                 depth_frame[corners[2][1]][corners[2][0]],
+                                 depth_frame[corners[3][1]][corners[3][0]]])  # Дистанции до углов рамки от дрона
+
+                # print corners
                 # print dist
 
                 # print dist.max()
@@ -365,25 +394,44 @@ def frame_corners_detector():
 
                     go_to = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y, drone_pose.pose.position.z, roll, pitch, yaw, goal_)
 
-                    goal_pose.pose.point.x = go_to[0]
+                    goal_pose.pose.point.x = go_to[0] # goal_pose.pose.point.x = go_to[0]#
+
                     goal_pose.pose.point.y = go_to[1]
                     goal_pose.pose.point.z = go_to[2]
                     goal_pose.pose.course = yaw
 
-                    while True:
-                        if not abs(goal_pose.pose.point.x - drone_pose.pose.position.x) < 0.3 and not abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.3:
+
+                    if  abs(goal_pose.pose.point.x - drone_pose.pose.position.x) > 0.1 and abs(goal_pose.pose.point.y - drone_pose.pose.position.y) > 0.1 and abs(
+                            goal_pose.pose.point.z - drone_pose.pose.position.z) > 0.1:
+
+                        while True:
                             goal_pose_pub.publish(goal_pose)
                             print abs(goal_pose.pose.point.x - drone_pose.pose.position.x), abs(goal_pose.pose.point.y - drone_pose.pose.position.y)
 
-                        elif abs(goal_pose.pose.point.x - drone_pose.pose.position.x) < 0.3 and abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.3:
-                            print "__DONE__"
-                            frame_detect_flag.detect_frame = False
-                            detect_frame_publisher.publish(frame_detect_flag)
-                            break
+                            if abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.1 and abs(
+                                    goal_pose.pose.point.z - drone_pose.pose.position.z) < 0.15:
+                                print "__DONE__"
+                                frame_detect_flag.detect_frame = False
+                                detect_frame_publisher.publish(frame_detect_flag)
+
+                                last_goal_pose = goal_pose
+
+                                break
+
+
+                        # elif abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.2 and abs(goal_pose.pose.point.z - drone_pose.pose.position.z) < 0.2:
+                        #     print "__DONE__"
+                        #     frame_detect_flag.detect_frame = False
+                        #     detect_frame_publisher.publish(frame_detect_flag)
+                        #     break
             else:
                 window_detect_flag = False
                 frame_detect_flag.detect_frame = False
                 detect_frame_publisher.publish(frame_detect_flag)
+
+                if abs(drone_pose.pose.position.x - last_goal_pose.pose.point.x) > 1.5 and abs(
+                        drone_pose.pose.position.y - last_goal_pose.pose.point.y) > 1.5:
+                    print "UUPP"
         else:
             print "Image not read"
     except:
@@ -434,6 +482,8 @@ def detector_of_pillar():
                 print "detect pillar"
                 frame_detect_flag.detect_frame = True
                 detect_frame_publisher.publish(frame_detect_flag)
+                use_unstable = False
+                client.update_configuration({"run": use_unstable})
 
                 # if flag:
                 goal_pose.pose.point.x, goal_pose.pose.point.y = transform_cord(yaw, (x, y, 0.0))   # + Q, (dist_to_pillar + 1.5, 0.0, 0.0)
@@ -484,7 +534,7 @@ def main():
 
     rospy.init_node("Frame_detector_node")
 
-    hz = rospy.Rate(5)
+    hz = rospy.Rate(50)
 
     # init subscribers
     rospy.Subscriber(depth_image_topic, Image, depth_image_cb)
@@ -497,6 +547,8 @@ def main():
     detect_frame_publisher = rospy.Publisher(frame_detect_topic, frame_detect, queue_size=10)
     marker_publisher = rospy.Publisher('window_target_marker', Marker)
 
+    # init client dyhamic reconfigure
+    client = dynamic_reconfigure.client.Client("unstable_planner_node", timeout=1, config_callback=callback)
 
     while not rospy.is_shutdown():
 

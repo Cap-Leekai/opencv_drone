@@ -193,7 +193,12 @@ def main():
 
                     goal_pose.pose.point.x = x_glob
                     goal_pose.pose.point.y = y_glob
-                    goal_pose.pose.point.z = 1.6
+
+                    if drone_alt > 1.2:
+                        goal_pose.pose.point.z = drone_alt
+                    elif drone_alt < 1.3:
+                        goal_pose.pose.point.z = 1.2
+
 
                     # целевой курс в goal_pose -> yaw + math.atan2( -(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), 320)
                     goal_pose.pose.course = yaw + math.atan2(-(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), cv_img.shape[1] // 2)
