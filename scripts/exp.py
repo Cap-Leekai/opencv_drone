@@ -20,11 +20,6 @@ ros_image_down = Image()
 # cap_forward.set(cv.CAP_PROP_FRAME_WIDTH, 640) # Ширина кадров в видеопотоке.
 # cap_forward.set(cv.CAP_PROP_FRAME_HEIGHT, 360) # Высота кадров в видеопотоке.
 
-
-def img_cb_d(data):
-    global ros_image_down
-    ros_image_down = data
-
 def img_cb_f(data):
     global ros_image_forward
     ros_image_forward = data
@@ -37,7 +32,6 @@ def main():
     bridge = CvBridge()
     bridge_sec = CvBridge()
 
-    rospy.Subscriber('/mono_cam_down/camera_mono/image_raw', Image, img_cb_d)
     rospy.Subscriber('/mono_cam_forward/camera_mono_forward/image_raw', Image, img_cb_f)
 
     while not rospy.is_shutdown():
