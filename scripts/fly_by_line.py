@@ -187,9 +187,12 @@ def main():
                 # находим коэффициент пиксель на метр
                 pixel_on_meter = float((sum(LIST) // len(LIST))) // width_of_line
 
+                if pixel_on_meter == 0:
+                    continue
+
                 # находим координаты целевой точки в локальной системе координат
-                correct_y = (sm_pix_y / pixel_on_meter) + 1.0
-                correct_x = (sm_pix_x / pixel_on_meter) + 1.0
+                correct_y = (sm_pix_y / pixel_on_meter)
+                correct_x = 4.0     #(sm_pix_x / pixel_on_meter) +
 
                 # отображаем линию масштаба - теоретически линия на кадре показывает МЕТР
                 cv.line(cv_img, (cv_img.shape[1], 0), (cv_img.shape[1], int(pixel_on_meter)), (255, 0, 255), 10)
