@@ -190,9 +190,11 @@ def main():
                 if pixel_on_meter == 0:
                     continue
 
+
+
                 # находим координаты целевой точки в локальной системе координат
                 correct_y = (sm_pix_y / pixel_on_meter)
-                correct_x = 4.0     #(sm_pix_x / pixel_on_meter) +
+                correct_x = 1.8     #(sm_pix_x / pixel_on_meter) +
 
                 # отображаем линию масштаба - теоретически линия на кадре показывает МЕТР
                 cv.line(cv_img, (cv_img.shape[1], 0), (cv_img.shape[1], int(pixel_on_meter)), (255, 0, 255), 10)
@@ -204,10 +206,10 @@ def main():
                 goal_pose.pose.point.x = x_glob
                 goal_pose.pose.point.y = y_glob
 
-                if drone_alt > 1.2:
-                    goal_pose.pose.point.z = drone_pose.pose.position.z
-                elif drone_alt < 1.3:
-                    goal_pose.pose.point.z = 1.2
+                # if drone_alt > 1.2:
+                goal_pose.pose.point.z = 1.5
+                # elif drone_alt < 1.3:
+                #     goal_pose.pose.point.z = 1.2
 
 
                 # целевой курс в goal_pose -> yaw + math.atan2( -(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), 320)
