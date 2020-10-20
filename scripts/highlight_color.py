@@ -8,8 +8,8 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 
 # топики
-cam_topic = "/iris_rplidar/usb_cam/image_raw"
-# ros_img = Image()
+cam_topic = "/mono_cam_forward/camera_mono/image_raw"
+ros_img = Image()
 
 def img_cb(data):
     global ros_img
@@ -46,20 +46,20 @@ cv_img = cv.imread('/home/leekay/catkin_ws/src/opencv_drone/images/frame_ang.png
 
 def main():
     global ros_img
-    # rospy.init_node("highlight_color_node")
+    rospy.init_node("highlight_color_node")
 
     bridge = CvBridge()
 
-    # rospy.Subscriber(cam_topic, Image, img_cb)
+    rospy.Subscriber(cam_topic, Image, img_cb)
 
     while not rospy.is_shutdown():
         try:
-            # cv_img = bridge.imgmsg_to_cv2(ros_img, "bgr8")
-            # ret = True
+            cv_img = bridge.imgmsg_to_cv2(ros_img, "bgr8")
+            ret = True
             # читаем флаг подключения камеры и картинку с камеры
             # ret, frame = cap.read()
 
-            ret = True
+            # ret = True
             # frame = color
 
             # проверяем есть ли соединение с камерой

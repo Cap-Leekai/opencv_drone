@@ -9,7 +9,7 @@ import os
 import tf
 import math
 import time
-import dynamic_reconfigure.client
+# import dynamic_reconfigure
 
 
 from visualization_msgs.msg import Marker
@@ -20,10 +20,10 @@ from std_msgs.msg import Float32
 from drone_msgs.msg import Goal
 from geometry_msgs.msg import PoseStamped, Quaternion, Point
 
-client = dynamic_reconfigure.client
+# client = dynamic_reconfigure.client
 
-depth_image_topic = "/r200/depth/image_raw"
-image_topic = "/r200/image_raw"
+depth_image_topic = "/camera/aligned_depth_to_infra1/image_raw"
+# image_topic = "/r200/image_raw"
 frame_detect_topic = "/frame_detector"
 alt_topic = "/drone/alt"                                            # топик текущей высоты
 drone_pose_topic = "/mavros/local_position/pose"
@@ -148,6 +148,7 @@ def depth_image_cb(data):
         image_binary[(depth_frame < 4.5) & (depth_frame > 2.)] = 255
 
         image_binary = np.uint8(image_binary)
+        cv.imshow("test", image_binary)
 
     except:
         print "Error read depth image"
@@ -351,7 +352,7 @@ def frame_corners_detector():
                 print "Detect frame"
                 window_detect_flag = True
                 frame_detect_flag.detect_frame = True
-                detect_frame_publisher.publish(frame_detect_flag)
+                # detect_frame_publisher.publish(frame_detect_flag)
 
                 # time.sleep(2)
 
@@ -405,14 +406,14 @@ def frame_corners_detector():
                             goal_pose.pose.point.z - drone_pose.pose.position.z) > 0.1:
 
                         while True:
-                            goal_pose_pub.publish(goal_pose)
+                            # goal_pose_pub.publish(goal_pose)
                             print abs(goal_pose.pose.point.x - drone_pose.pose.position.x), abs(goal_pose.pose.point.y - drone_pose.pose.position.y)
 
                             if abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.1 and abs(
                                     goal_pose.pose.point.z - drone_pose.pose.position.z) < 0.15:
                                 print "__DONE__"
                                 frame_detect_flag.detect_frame = False
-                                detect_frame_publisher.publish(frame_detect_flag)
+                                # detect_frame_publisher.publish(frame_detect_flag)
 
                                 last_goal_pose = goal_pose
 
@@ -429,9 +430,6 @@ def frame_corners_detector():
                 frame_detect_flag.detect_frame = False
                 detect_frame_publisher.publish(frame_detect_flag)
 
-                if abs(drone_pose.pose.position.x - last_goal_pose.pose.point.x) > 1.5 and abs(
-                        drone_pose.pose.position.y - last_goal_pose.pose.point.y) > 1.5:
-                    print "UUPP"
         else:
             print "Image not read"
     except:
@@ -440,72 +438,72 @@ def frame_corners_detector():
 
 
 # функция нахождения столба
-def detector_of_pillar():
-    global flag, rgb_image_copy, cv_image
-
-    rgb_image_copy = rgb_image.copy()
-
-    if rgb_image_copy is not None and 255 in image_binary:
-
-        rgb_integrate = cv.bitwise_and(rgb_image, rgb_image, mask=image_binary)
-
-        half_bin = image_binary[: image_binary.shape[0] // 2, :]
-        half_depth = depth_frame[: depth_frame.shape[0] // 2, :]
-
-        # находим контуры
-        contours, hierarchy = cv.findContours(half_bin, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
-
-        # сортируем контуры
-        contours = sorted(contours, key=cv.contourArea, reverse=True)
-
-        if len(contours):
-            cv.drawContours(rgb_integrate, contours[0], -1, (0, 255, 0), 5)
-
-            cords_of_rect = cv.boundingRect(contours[0])
-            cords_of_center = ((cords_of_rect[0] + cords_of_rect[2] // 2), (cords_of_rect[1] + cords_of_rect[3] // 2))
-
-            cv.rectangle(rgb_integrate, (cords_of_rect[0], cords_of_rect[1]), (cords_of_rect[0] + cords_of_rect[2], cords_of_rect[1] + cords_of_rect[3]), (255, 0, 0), 1)
-            cv.circle(rgb_integrate, ((cords_of_rect[0] + cords_of_rect[2] // 2), (cords_of_rect[1] + cords_of_rect[3] // 2)), 10, (0, 255, 0), -10)
-
-            Q = -(cords_of_center[0] - (image_binary.shape[1] // 2)) * (1.3962 / image_binary.shape[1])      # 1.3962 - угол обзора камеры в радианах
-
-            # print cords_of_center, Q
-            dist_to_pillar = half_depth[cords_of_center[1]][cords_of_center[0]]
-
-            x = math.cos(Q) * (dist_to_pillar + 2.0)
-            y = math.sin(Q) * (dist_to_pillar + 1.5)
-
-            cv.imshow("pillar", rgb_integrate)
-            # print cv.contourArea(contours[0]), dist_to_pillar
-
-            if cv.contourArea(contours[0]) > 10000. and dist_to_pillar < 2. and not window_detect_flag:
-                print "detect pillar"
-                frame_detect_flag.detect_frame = True
-                detect_frame_publisher.publish(frame_detect_flag)
-                use_unstable = False
-                client.update_configuration({"run": use_unstable})
-
-                # if flag:
-                goal_pose.pose.point.x, goal_pose.pose.point.y = transform_cord(yaw, (x, y, 0.0))   # + Q, (dist_to_pillar + 1.5, 0.0, 0.0)
-
-                goal_pose.pose.point.z = drone_alt
-                goal_pose.pose.course = yaw + Q
-
-                while True:
-                    if not abs(goal_pose.pose.point.x - drone_pose.pose.position.x) < 0.3 and not abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.3:
-                        goal_pose_pub.publish(goal_pose)
-                        print abs(goal_pose.pose.point.x - drone_pose.pose.position.x), abs(goal_pose.pose.point.y - drone_pose.pose.position.y)
-
-                    elif abs(goal_pose.pose.point.x - drone_pose.pose.position.x) < 0.3 and abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.3:
-                        print "__DONE__"
-                        # flag = True
-                        frame_detect_flag.detect_frame = False
-                        detect_frame_publisher.publish(frame_detect_flag)
-                        break
-            else:
-                pass
-                # frame_detect_flag.detect_frame = False
-                # detect_frame_publisher.publish(frame_detect_flag)
+# def detector_of_pillar():
+#     global flag, rgb_image_copy, cv_image
+#
+#     rgb_image_copy = rgb_image.copy()
+#
+#     if rgb_image_copy is not None and 255 in image_binary:
+#
+#         rgb_integrate = cv.bitwise_and(rgb_image, rgb_image, mask=image_binary)
+#
+#         half_bin = image_binary[: image_binary.shape[0] // 2, :]
+#         half_depth = depth_frame[: depth_frame.shape[0] // 2, :]
+#
+#         # находим контуры
+#         contours, hierarchy = cv.findContours(half_bin, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+#
+#         # сортируем контуры
+#         contours = sorted(contours, key=cv.contourArea, reverse=True)
+#
+#         if len(contours):
+#             cv.drawContours(rgb_integrate, contours[0], -1, (0, 255, 0), 5)
+#
+#             cords_of_rect = cv.boundingRect(contours[0])
+#             cords_of_center = ((cords_of_rect[0] + cords_of_rect[2] // 2), (cords_of_rect[1] + cords_of_rect[3] // 2))
+#
+#             cv.rectangle(rgb_integrate, (cords_of_rect[0], cords_of_rect[1]), (cords_of_rect[0] + cords_of_rect[2], cords_of_rect[1] + cords_of_rect[3]), (255, 0, 0), 1)
+#             cv.circle(rgb_integrate, ((cords_of_rect[0] + cords_of_rect[2] // 2), (cords_of_rect[1] + cords_of_rect[3] // 2)), 10, (0, 255, 0), -10)
+#
+#             Q = -(cords_of_center[0] - (image_binary.shape[1] // 2)) * (1.3962 / image_binary.shape[1])      # 1.3962 - угол обзора камеры в радианах
+#
+#             # print cords_of_center, Q
+#             dist_to_pillar = half_depth[cords_of_center[1]][cords_of_center[0]]
+#
+#             x = math.cos(Q) * (dist_to_pillar + 2.0)
+#             y = math.sin(Q) * (dist_to_pillar + 1.5)
+#
+#             cv.imshow("pillar", rgb_integrate)
+#             # print cv.contourArea(contours[0]), dist_to_pillar
+#
+#             if cv.contourArea(contours[0]) > 10000. and dist_to_pillar < 2. and not window_detect_flag:
+#                 print "detect pillar"
+#                 frame_detect_flag.detect_frame = True
+#                 detect_frame_publisher.publish(frame_detect_flag)
+#                 use_unstable = False
+#                 # client.update_configuration({"run": use_unstable})
+#
+#                 # if flag:
+#                 goal_pose.pose.point.x, goal_pose.pose.point.y = transform_cord(yaw, (x, y, 0.0))   # + Q, (dist_to_pillar + 1.5, 0.0, 0.0)
+#
+#                 goal_pose.pose.point.z = drone_alt
+#                 goal_pose.pose.course = yaw + Q
+#
+#                 while True:
+#                     if not abs(goal_pose.pose.point.x - drone_pose.pose.position.x) < 0.3 and not abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.3:
+#                         goal_pose_pub.publish(goal_pose)
+#                         print abs(goal_pose.pose.point.x - drone_pose.pose.position.x), abs(goal_pose.pose.point.y - drone_pose.pose.position.y)
+#
+#                     elif abs(goal_pose.pose.point.x - drone_pose.pose.position.x) < 0.3 and abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.3:
+#                         print "__DONE__"
+#                         # flag = True
+#                         frame_detect_flag.detect_frame = False
+#                         detect_frame_publisher.publish(frame_detect_flag)
+#                         break
+#             else:
+#                 pass
+#                 # frame_detect_flag.detect_frame = False
+#                 # detect_frame_publisher.publish(frame_detect_flag)
 
 
 def make_marker(point):
@@ -538,7 +536,7 @@ def main():
 
     # init subscribers
     rospy.Subscriber(depth_image_topic, Image, depth_image_cb)
-    rospy.Subscriber(image_topic, Image, rgb_image_cb)
+    # rospy.Subscriber(image_topic, Image, rgb_image_cb)
     rospy.Subscriber(drone_pose_topic, PoseStamped, drone_pose_cb)
     rospy.Subscriber(alt_topic, Float32, drone_alt_cb)
 
@@ -548,54 +546,54 @@ def main():
     marker_publisher = rospy.Publisher('window_target_marker', Marker)
 
     # init client dyhamic reconfigure
-    client = dynamic_reconfigure.client.Client("unstable_planner_node", timeout=1, config_callback=callback)
+    # client = dynamic_reconfigure.client.Client("unstable_planner_node", timeout=1, config_callback=callback)
 
     while not rospy.is_shutdown():
-
-        if depth_frame is not None and rgb_image is not None:
-
-            frame_corners_detector()
-
-            # if window_detect_flag:
-                # print corners
-
-
-                    # goal_.x = goal_.x + 3.
-                    # if goal_:
-                    #     go_to = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y, drone_pose.pose.position.z, roll, pitch, yaw, goal_)
-                    #
-                    #     goal_pose.pose.point.x = go_to[0]
-                    #     goal_pose.pose.point.y = go_to[1]
-                    #     goal_pose.pose.point.z = go_to[2]
-                    #     goal_pose.pose.course = yaw
-                    #
-                    #     while True:
-                    #         # while True:
-                    #         if not abs(goal_pose.pose.point.x - drone_pose.pose.position.x) < 0.3 and not abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.3:
-                    #             goal_pose_pub.publish(goal_pose)
-                    #             print abs(goal_pose.pose.point.x - drone_pose.pose.position.x), abs(goal_pose.pose.point.y - drone_pose.pose.position.y)
-                    #
-                    #         elif abs(goal_pose.pose.point.x - drone_pose.pose.position.x) < 0.3 and abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.3:
-                    #             print "__DONE__"
-                    #             frame_detect_flag.detect_frame = False
-                    #             detect_frame_publisher.publish(frame_detect_flag)
-                    #             break
-
-                        # if window_detect_flag:
-                        #     goal_pose_pub.publish(goal_pose)
-                        #     # time.sleep(10)
-                            # print "go_to"
-
-                    # print('x : ' + str(goal_.x) + ', ' + 'y : ' + str(goal_.y) + ', ' + 'z : ' + str(goal_.z))
-
-            # else:
-            #     print "Corners not detect"
-
-            # detector_of_pillar()
-            # pass
-            hz.sleep()
-        else:
-            print "Images not read"
+        pass
+        # if depth_frame is not None and rgb_image is not None:
+        #
+        #     # frame_corners_detector()
+        #
+        #     # if window_detect_flag:
+        #         # print corners
+        #
+        #
+        #             # goal_.x = goal_.x + 3.
+        #             # if goal_:
+        #             #     go_to = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y, drone_pose.pose.position.z, roll, pitch, yaw, goal_)
+        #             #
+        #             #     goal_pose.pose.point.x = go_to[0]
+        #             #     goal_pose.pose.point.y = go_to[1]
+        #             #     goal_pose.pose.point.z = go_to[2]
+        #             #     goal_pose.pose.course = yaw
+        #             #
+        #             #     while True:
+        #             #         # while True:
+        #             #         if not abs(goal_pose.pose.point.x - drone_pose.pose.position.x) < 0.3 and not abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.3:
+        #             #             goal_pose_pub.publish(goal_pose)
+        #             #             print abs(goal_pose.pose.point.x - drone_pose.pose.position.x), abs(goal_pose.pose.point.y - drone_pose.pose.position.y)
+        #             #
+        #             #         elif abs(goal_pose.pose.point.x - drone_pose.pose.position.x) < 0.3 and abs(goal_pose.pose.point.y - drone_pose.pose.position.y) < 0.3:
+        #             #             print "__DONE__"
+        #             #             frame_detect_flag.detect_frame = False
+        #             #             detect_frame_publisher.publish(frame_detect_flag)
+        #             #             break
+        #
+        #                 # if window_detect_flag:
+        #                 #     goal_pose_pub.publish(goal_pose)
+        #                 #     # time.sleep(10)
+        #                     # print "go_to"
+        #
+        #             # print('x : ' + str(goal_.x) + ', ' + 'y : ' + str(goal_.y) + ', ' + 'z : ' + str(goal_.z))
+        #
+        #     # else:
+        #     #     print "Corners not detect"
+        #
+        #     # detector_of_pillar()
+        #     # pass
+        #     hz.sleep()
+        # else:
+        #     print "Images not read"
 
         if cv.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
             break

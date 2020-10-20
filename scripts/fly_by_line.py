@@ -168,7 +168,7 @@ def main():
                 cv.circle(cv_img_copy, ((cords_of_rect[0] + cords_of_rect[2] // 2), (cords_of_rect[1] + cords_of_rect[3] // 2)), 10, (0, 255, 0), -10)
                 cv.imshow("Contours", cv_img_copy)
 
-            sm_pix_x = float((cords_of_rect[0] + cords_of_rect[2] // 2) - midpoint_x)           # вычисляем смещение от центра кадра в пикселях по x
+            sm_pix_x = -float((cords_of_rect[0] + cords_of_rect[2] // 2) - midpoint_x)           # вычисляем смещение от центра кадра в пикселях по x
             rospy.loginfo("sm_pix_x: %s", sm_pix_x)
 
             ####
