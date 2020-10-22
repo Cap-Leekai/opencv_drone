@@ -1,0 +1,14 @@
+<launch>
+
+<node pkg="opencv_drone" type="FrameDetector_v2.py" name="frame_detector_node">
+
+    <param name="depth_image_topic" value="/camera/depth/image_rect_raw"/>
+    
+    <param name="view_result_flag" value="true"/>
+    
+    <param name="image_width_px" value="1280"/>
+    <param name="image_height_px" value="720"/>
+
+</node>
+
+</launch>
