@@ -6,7 +6,7 @@ import rospy
 
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
-
+import numpy as np
 # топики
 cam_topic = "/mono_cam_forward/camera_mono/image_raw"
 ros_img = Image()
@@ -19,14 +19,11 @@ def img_cb(data):
 # создаём пустую функцию
 def nothing(x):
     pass
-
-
 # делаем захват видео с камеры в переменную cap
 # cap = cv.VideoCapture("passing_gazebo_green.mp4")    #stereo elp >> /dev/video2, /dev/video4
 # cap.set(cv.CAP_PROP_FPS, 24) # Частота кадров
 # cap.set(cv.CAP_PROP_FRAME_WIDTH, 640) # Ширина кадров в видеопотоке.
 # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 360) # Высота кадров в видеопотоке.
-
 
 # создам пустое окно с именем result
 cv.namedWindow('result')
@@ -40,7 +37,7 @@ cv.createTrackbar('maxb', 'result', 0, 255, nothing)
 cv.createTrackbar('maxg', 'result', 0, 255, nothing)
 cv.createTrackbar('maxr', 'result', 0, 255, nothing)
 
-cv_img = cv.imread('/home/leekay/catkin_ws/src/opencv_drone/images/frame_ang.png')
+# cv_img = cv.imread('/home/leekay/catkin_ws/src/opencv_drone/images/frame_ang.png')
 
 # cv.imshow('color', color)
 
@@ -68,41 +65,50 @@ def main():
                 # переводим картинку с камеры из формата BGR в HSV
                 # hsv = cv_img
 
-                r_channel = cv_img[ :, :, 2]
+                # r_channel = cv_img[ :, :, 2]
                 # hsv = r_channel
                 # cv.imshow("r_chnl", r_channel)
-                hsv = cv.cvtColor(cv_img, cv.COLOR_BGR2HSV)
+                # h = cv.cvtColor(cv_img, cv.COLOR_BGR2HLS)
                 # cv.imshow('frame', hsv) # выводим картинку с камеры в формате HSV на экран
 
                 # получаем значения задаваемые бегунками
-                minb = cv.getTrackbarPos('minb', 'result')
-                ming = cv.getTrackbarPos('ming', 'result')
-                minr = cv.getTrackbarPos('minr', 'result')
+                minb = cv.getTrackbarPos('minb', 'result')          #maxb = 118/119
+                ming = cv.getTrackbarPos('ming', 'result')          #maxg = 83/105
+                minr = cv.getTrackbarPos('minr', 'result')          #maxr = 126/64
 
                 maxb = cv.getTrackbarPos('maxb', 'result')
                 maxg = cv.getTrackbarPos('maxg', 'result')
                 maxr = cv.getTrackbarPos('maxr', 'result')
 
                 # делаем размытие картинки HSV
-                hsv = cv.blur(hsv, (4, 4))
+                # hsv = cv.blur(hsv, (4, 4))
                 # cv.imshow('Blur', hsv)
 
+
+
                 # делаем бинаризацию картинки и пихаем её в переменную mask
-                mask = cv.inRange(hsv, (minb, ming, minr), (maxb, maxg, maxr))
+                mask = cv.inRange(cv_img, (minb, ming, minr), (maxb, maxg, maxr))         #mask = cv.inRange(cv_img, (minb, ming, minr), (maxb, maxg, maxr))
                 # cv.imshow('mask', mask)
 
                 # Уменьшаем контуры белых объектов - делаем две итерации
-                maskEr = cv.erode(mask, None, iterations=2)
-                # cv.imshow("Erode", maskEr)
+                maskEr = cv.erode(mask, None, iterations=3)
+                cv.imshow("Erode", maskEr)
 
                 # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем две итерации
-                maskDi = cv.dilate(maskEr, None, iterations=2)
+                maskDi = cv.dilate(maskEr, None, iterations=3)
                 # cv.imshow('Dilate', maskDi)
 
                 # накладываем полученную маску на картинку с камеры переведённую в формат HSV
-                result = cv.bitwise_and(cv_img, cv_img, mask = mask)
+                # result = cv.bitwise_and(cv_img, cv_img, mask = mask)
                 # result = cv.resize(result, (500, 500))
-                cv.imshow('result', result)
+
+                # binary_hls = hls[:, :, 0]
+                #
+                # binary = np.zeros_like(cv_img)
+                #
+                # binary[(binary_hls < 120)] = 255
+
+                cv.imshow('result', mask)
 
                 # print(result)
                 if cv.waitKey(1) == 27: # проверяем была ли нажата кнопка esc

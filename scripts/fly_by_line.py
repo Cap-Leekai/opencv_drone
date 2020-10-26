@@ -25,18 +25,57 @@ drone_goal_pose = "/goal_pose"
 # переменные
 goal_pose = Goal()
 drone_pose = PoseStamped()
-image_size = [480, 640]
+
+image_width_px = 640
+image_height_px = 480
+
+cut_tr = 100
 h_trapeze = 100
+
+image_size = [image_height_px, image_width_px]
 width_of_line = 0.2
+x_forvard = 3.0
+
+minb = 0
+ming = 0
+minr = 0
+
+maxb = 0
+maxg = 0
+maxr = 0
+
 ros_img = None
 quaternion = None
 
 view_result_flag = True
 
-trapeze_cords = np.float32([[0, 480], [640, 480], [540, image_size[0] - h_trapeze],  [100, image_size[0] - h_trapeze]])
+trapeze_cords = np.float32([[0, image_height_px], [image_width_px, image_height_px], [540, image_size[0] - h_trapeze],  [100, image_size[0] - h_trapeze]])
 trapeze_cords_draw = np.array(trapeze_cords, dtype=np.int32)
 
 reshape_trapeze_cords = np.float32([[0, image_size[1]], [image_size[1], image_size[0]], [image_size[1], 0], [0, 0]])
+
+
+# берем конфигурацию основных переменных из сервера параметров ROS
+def get_params_server():
+    global view_result_flag, image_width_px, image_height_px, maxb, maxg, maxr, h_trapeze, cut_tr, cam_img_topic, x_forvard
+
+    cam_img_topic = rospy.get_param('~cam_img_topic', cam_img_topic)
+
+    maxb = rospy.get_param('~maxb', maxb)
+    maxg = rospy.get_param('~maxg', maxg)
+    maxr = rospy.get_param('~maxr', maxr)
+
+    h_trapeze = rospy.get_param('~h_trapeze', h_trapeze)
+    cut_tr = rospy.get_param('~cut_tr', cut_tr)
+
+    image_width_px = rospy.get_param('~image_width_px', image_width_px)
+    image_height_px = rospy.get_param('~image_height_px', image_height_px)
+
+    view_result_flag = rospy.get_param('~view_result_flag', view_result_flag)
+
+    x_forvard = rospy.get_param('~x_forvard', x_forvard)
+
+    rospy.loginfo("init params done")
 
 
 # функция преобразования локальных координат в глобальные координаты
@@ -83,6 +122,7 @@ def main():
     rospy.init_node('fly_by_line_node')
     bridge = CvBridge()
 
+    get_params_server()
 
     # init subscribers
     rospy.Subscriber(cam_img_topic, Image, cam_img_cb)
@@ -100,24 +140,29 @@ def main():
         else:
             rospy.loginfo_throttle(6, "Camera not read!")
             continue
+        #####
 
+        #cv_img -> bin_img
+        
+        AllBinary = cv.inRange(cv_img, (minb, ming, minr), (maxb, maxg, maxr))
 
+        #####
         # извлекаем КРАСНЫЙ канал из кадра видеопотока
-        r_channel = cv_img[:, :, 2]
-        # создаем массив размером как r_channel
-        binary_r = np.zeros_like(r_channel)
-        # заносим соответствующие пиксели из r_channel, которые меньше 2 в массив binary_r со знаением 1
-        binary_r[(r_channel == 0)] = 1
-
-        # извлекаем из HLS канал отвечающий за яркость
-        hls_img = cv.cvtColor(cv_img, cv.COLOR_BGR2HLS)
-        s_channel = hls_img[:, :, 1]            # олд [:, :, 2]
-        binary_s = np.zeros_like(s_channel)
-        binary_s[(s_channel == 0)] = 1
-
-        # объединяем два бинаризованного изображения в одно
-        AllBinary = np.zeros_like(binary_r)
-        AllBinary[((binary_r == 1)|(binary_s == 1))] = 255
+        # r_channel = cv_img[:, :, 2]
+        # # создаем массив размером как r_channel
+        # binary_r = np.zeros_like(r_channel)
+        # # заносим соответствующие пиксели из r_channel, которые меньше 2 в массив binary_r со знаением 1
+        # binary_r[(r_channel == 0)] = 1
+        #
+        # # извлекаем из HLS канал отвечающий за яркость
+        # hls_img = cv.cvtColor(cv_img, cv.COLOR_BGR2HLS)
+        # s_channel = hls_img[:, :, 1]            # олд [:, :, 2]
+        # binary_s = np.zeros_like(s_channel)
+        # binary_s[(s_channel == 0)] = 1
+        #
+        # # объединяем два бинаризованного изображения в одно
+        # AllBinary = np.zeros_like(binary_r)
+        # AllBinary[((binary_r == 1)|(binary_s == 1))] = 255
 
         # Фильтруем
         # Уменьшаем контуры белых объектов - делаем две итерации
