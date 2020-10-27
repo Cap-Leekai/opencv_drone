@@ -150,7 +150,7 @@ def drone_pose_cb(data):
         data.pose.orientation.z,
         data.pose.orientation.w)
     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
-
+    # print("pitch-> ", pitch)
 
 def calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height, width):
     '''
@@ -298,9 +298,9 @@ def make_marker(point, id):
     marker.type = marker.SPHERE
     marker.action = marker.ADD
     marker.id = id
-    marker.scale.x = 0.2
-    marker.scale.y = 0.2
-    marker.scale.z = 0.2
+    marker.scale.x = 0.5
+    marker.scale.y = 0.5
+    marker.scale.z = 0.5
     marker.color.a = 1.0
     marker.color.r = 1.0
     marker.color.g = 1.0
@@ -337,7 +337,7 @@ def transform_cords_3D(X, Y, Z, roll, pitch, yaw, goal_):
     glob_cords_of_point2 = [glob_cords_of_point2[0] + X, glob_cords_of_point2[1] + Y, glob_cords_of_point2[2] + Z]
 
 
-    glob_cords_of_points = [glob_cords_of_point1, glob_cords_of_point2]
+    glob_cords_of_points = [glob_cords_of_point0, glob_cords_of_point1, glob_cords_of_point2]
 
     # print "glob_cords -> ", glob_cords_of_point
     return glob_cords_of_points
@@ -360,6 +360,8 @@ def trajectory_publisher(trajectory, yaw_error):
             goal_pose.pose.point.x = x
             goal_pose.pose.point.y = y
             goal_pose.pose.point.z = z
+
+            print z
 
             if flag_corrector_course is not True:
                 goal_pose.pose.course = yaw + yaw_error
@@ -448,9 +450,9 @@ def main():
 
                 # rospy.loginfo("Ft: %s" %abs(Ft))
 
-                if Ft > 100.0:
-                    rospy.loginfo("Area pick!")
-                    continue
+                # if Ft > 100.0:
+                #     rospy.loginfo("Area pick!")
+                #     continue
                 ###
 
 
@@ -467,7 +469,7 @@ def main():
                 corners = np.int0(corners)
 
                 if cv.contourArea(approx) > 30000. and corners is not None:
-                    # print "Detect frame"
+                    rospy.loginfo("Detect frame")
                     window_detect_flag = True
                     try:
                         corners = corners.reshape(4, -1)
@@ -536,10 +538,11 @@ def main():
 
                             #******#
                             trajectory = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y,
-                                                       drone_pose.pose.position.z, roll, pitch, yaw, goal_)
+                                                       drone_pose.pose.position.z, 0.0, 0.0, yaw, goal_)
                             trajectory_publisher(trajectory, yaw_error)
                             #******#
-
+                        else:
+                            rospy.loginfo("DIST IS NOT OK! NAN")
                     except:
                         continue
                 # rect = cv.minAreaRect(contours[1])

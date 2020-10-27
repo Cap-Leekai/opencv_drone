@@ -19,6 +19,7 @@ from opencv_drone.msg import frame_detect
 
 # инициализация топиков
 cam_img_topic = "/r200/image_raw"                                   # топик нижней камеры
+cam_down_img_topic = "/iris_rplidar/usb_cam/image_raw"
 drone_pose_topic = "/mavros/local_position/pose"                    # топик текущей позиции
 drone_goal_pose = "/goal_pose"
 
@@ -30,7 +31,7 @@ image_width_px = 640
 image_height_px = 480
 
 cut_tr = 100
-h_trapeze = 100
+h_trapeze = 60
 
 image_size = [image_height_px, image_width_px]
 width_of_line = 0.2
@@ -44,7 +45,16 @@ maxb = 0
 maxg = 0
 maxr = 0
 
+minb_down = 0
+ming_down = 0
+minr_down = 0
+
+maxb_down = 100
+maxg_down = 70
+maxr_down = 64
+
 ros_img = None
+ros_img_down = None
 quaternion = None
 
 view_result_flag = True
@@ -117,6 +127,12 @@ def cam_img_cb(data):
     ros_img = data
 
 
+# колбэк для считывания картинки из ROS
+def cam_down_img_cb(data):
+    global ros_img_down
+    ros_img_down = data
+
+
 # главная функция
 def main():
     rospy.init_node('fly_by_line_node')
@@ -126,6 +142,8 @@ def main():
 
     # init subscribers
     rospy.Subscriber(cam_img_topic, Image, cam_img_cb)
+    rospy.Subscriber(cam_down_img_topic, Image, cam_down_img_cb)
+
     rospy.Subscriber(drone_pose_topic, PoseStamped, drone_pose_cb)
 
     # init publishers
@@ -135,16 +153,20 @@ def main():
     rospy.loginfo("_BEGIN_")
     # основной цикл
     while not rospy.is_shutdown():
-        if ros_img:
+        if ros_img and ros_img_down:
             cv_img = bridge.imgmsg_to_cv2(ros_img, "bgr8")
+            cv_img_down = bridge.imgmsg_to_cv2(ros_img_down, "bgr8")
         else:
             rospy.loginfo_throttle(6, "Camera not read!")
             continue
         #####
 
         #cv_img -> bin_img
-        
+
+
+
         AllBinary = cv.inRange(cv_img, (minb, ming, minr), (maxb, maxg, maxr))
+        AllBinary_down = cv.inRange(cv_img_down, (minb_down, ming_down, minr_down), (maxb_down, maxg_down, maxr_down))
 
         #####
         # извлекаем КРАСНЫЙ канал из кадра видеопотока
@@ -194,39 +216,117 @@ def main():
             rospy.loginfo_throttle(5, "Line lost!")
             continue
 
-        #___Приступаем к вычислению смещения коптера от линии___#
+        # ___Приступаем к вычислению смещения коптера от линии___ #
+        #******#
+        # # НАХОДИМ КОНТУРЫ #
+        # contours, hierarchy = cv.findContours(warped[240:, :], cv.RETR_TREE, cv.CHAIN_APPROX_NONE)           # [AllBinary.shape[0] // 2 + 200:, :]
+        #
+        # if len(contours):
+        #     # сортируем контуры
+        #     contours = sorted(contours, key = cv.contourArea, reverse = True)
+        #     cords_of_rect = cv.boundingRect(contours[0]) #берем самый большой контур из массива контуров
+        #     # cords_of_rect = [cords_of_rect[0] + AllBinary.shape[1] // 2 , cords_of_rect[1], cords_of_rect[2], cords_of_rect[3]]
+        #
+        #     if view_result_flag:
+        #         cv_img_copy = cv_img.copy()
+        #         # вычленяем массив контуров из переменной contours
+        #         cv.drawContours(cv_img_copy, contours, -1, (0, 180, 255), 1)
+        #         cv.rectangle(cv_img_copy, (cords_of_rect[0], cords_of_rect[1]), (cords_of_rect[0] + cords_of_rect[2], cords_of_rect[1] + cords_of_rect[3]), (255, 0, 0), 1)                  # возвращает кортеж в формате  (x, y, w, h)
+        #         cv.circle(cv_img_copy, ((cords_of_rect[0] + cords_of_rect[2] // 2), (cords_of_rect[1] + cords_of_rect[3] // 2)), 10, (0, 255, 0), -10)
+        #         cv.imshow("Contours", cv_img_copy)
+        #
+        #     sm_pix_x = -float((cords_of_rect[0] + cords_of_rect[2] // 2) - midpoint_x)           # вычисляем смещение от центра кадра в пикселях по x
+        #     rospy.loginfo("sm_pix_x: %s", sm_pix_x)
+        #
+        #     ####
+        #     LIST = recalculation_cords(warped[warped.shape[0] // 2:, :])
+        #
+        #     # находим коэффициент пиксель на метр
+        #     pixel_on_meter = float((sum(LIST) // len(LIST))) // width_of_line
+        #     # rospy.loginfo("pixel_on_meter: %s" % pixel_on_meter)
+        #     ####
+        #     if pixel_on_meter == 0:
+        #         continue
+        #     correct_y = (sm_pix_x / pixel_on_meter)
+        #     rospy.loginfo("correct_y: %s", correct_y)
+        #******#
+
+        #******#
+        # Фильтруем
+        # Уменьшаем контуры белых объектов - делаем две итерации
+        AllBinary_down = cv.erode(AllBinary_down, None, iterations=5)
+        # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем 5 итераций
+        AllBinary_down = cv.dilate(AllBinary_down, None, iterations=5)
+
+        # находим сумму всех элементов каждого столбца массива AllBinary в диапазоне от AllBinary.shape[0] // 2 до AllBinary.shape[0]
+        histogram_right_down = np.sum(AllBinary_down[:, AllBinary_down.shape[1] // 2:], axis=1)
+        histogram_left_down = np.sum(AllBinary_down[:, :AllBinary_down.shape[1] // 2], axis=1)
+
+        # найдём координаты центра кадра
+        midpoint_y_down = cv_img_down.shape[0] // 2
+        midpoint_x_down = cv_img_down.shape[1] // 2
+
+        IndWhitesColumnR = np.argmax(histogram_right_down)  # [:histogram.shape[0]//2]
+        IndWhitesColumnL = np.argmax(histogram_left_down)  # [:histogram.shape[0]//2]
+
+        allbinary_copy_down = AllBinary_down.copy()
+
+        cv.line(allbinary_copy_down, (0, allbinary_copy_down.shape[0] // 2),
+                (allbinary_copy_down.shape[1], allbinary_copy_down.shape[0] // 2), 200, 2)  # рисуем статическую горизонталь
+
+        cv.line(allbinary_copy_down, (allbinary_copy_down.shape[1] // 2, allbinary_copy_down.shape[0] // 2),
+                (allbinary_copy_down.shape[1], IndWhitesColumnR), 180, 2)
+        cv.line(allbinary_copy_down, (0, IndWhitesColumnL), (allbinary_copy_down.shape[1] // 2, allbinary_copy_down.shape[0] // 2),
+                180, 2)
+
+        if quaternion is not None:
+            (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
+        else:
+            continue
+        # print "Курс: %s     Смещение курса: %s" %(yaw, yaw + math.atan2( -(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), cv_img.shape[1] // 2))     # целевой курс в goal_pose -> yaw + math.atan2( -(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), 320)
 
         # НАХОДИМ КОНТУРЫ
-        contours, hierarchy = cv.findContours(warped[240:, :], cv.RETR_TREE, cv.CHAIN_APPROX_NONE)           # [AllBinary.shape[0] // 2 + 200:, :]
+        contours, hierarchy = cv.findContours(AllBinary_down[:, AllBinary_down.shape[1] // 2: AllBinary_down.shape[1]],
+                                              cv.RETR_TREE,
+                                              cv.CHAIN_APPROX_NONE)  # AllBinary[:,AllBinary.shape[1] // 2 : AllBinary.shape[1]]     AllBinary.shape[1] // 2 : AllBinary.shape[1]
 
         if len(contours):
             # сортируем контуры
-            contours = sorted(contours, key = cv.contourArea, reverse = True)
-            cords_of_rect = cv.boundingRect(contours[0]) # берем самый большой контур из массива контуров
-            # cords_of_rect = [cords_of_rect[0] + AllBinary.shape[1] // 2 , cords_of_rect[1], cords_of_rect[2], cords_of_rect[3]]
+            contours = sorted(contours, key=cv.contourArea, reverse=True)
 
-            if view_result_flag:
-                cv_img_copy = cv_img.copy()
-                # вычленяем массив контуров из переменной contours
-                cv.drawContours(cv_img_copy, contours, -1, (0, 180, 255), 1)
-                cv.rectangle(cv_img_copy, (cords_of_rect[0], cords_of_rect[1]), (cords_of_rect[0] + cords_of_rect[2], cords_of_rect[1] + cords_of_rect[3]), (255, 0, 0), 1)                  # возвращает кортеж в формате  (x, y, w, h)
-                cv.circle(cv_img_copy, ((cords_of_rect[0] + cords_of_rect[2] // 2), (cords_of_rect[1] + cords_of_rect[3] // 2)), 10, (0, 255, 0), -10)
-                cv.imshow("Contours", cv_img_copy)
+            cords_of_rect = cv.boundingRect(contours[0])
+            cords_of_rect = [cords_of_rect[0] + AllBinary_down.shape[1] // 2, cords_of_rect[1], cords_of_rect[2],
+                             cords_of_rect[3]]
 
-            sm_pix_x = -float((cords_of_rect[0] + cords_of_rect[2] // 2) - midpoint_x)           # вычисляем смещение от центра кадра в пикселях по x
-            rospy.loginfo("sm_pix_x: %s", sm_pix_x)
+            # вычленяем массив контуров из переменной contours
+            # cv.drawContours(cv_img_down, contours, -1, (0, 180, 255), 1)
+            cv.rectangle(cv_img_down, (cords_of_rect[0], cords_of_rect[1]),
+                         (cords_of_rect[0] + cords_of_rect[2], cords_of_rect[1] + cords_of_rect[3]), (255, 0, 0),
+                         1)  # возвращает кортеж в формате  (x, y, w, h)
+            cv.circle(cv_img_down,
+                      ((cords_of_rect[0] + cords_of_rect[2] // 2), (cords_of_rect[1] + cords_of_rect[3] // 2)), 10,
+                      (0, 255, 0), -10)
 
-            ####
-            LIST = recalculation_cords(warped[warped.shape[0] // 2:, :])
+            LIST = recalculation_cords(AllBinary_down)
+
+            sm_pix_y = float(-(cords_of_rect[1] + cords_of_rect[
+                3] // 2) + midpoint_y)  # вычисляем смещение от центра кадра в пикселях по y
+            sm_pix_x = float((cords_of_rect[0] + cords_of_rect[
+                2] // 2) - midpoint_x)  # вычисляем смещение от центра кадра в пикселях по x
 
             # находим коэффициент пиксель на метр
-            pixel_on_meter = float((sum(LIST) // len(LIST))) // width_of_line
-            # rospy.loginfo("pixel_on_meter: %s" % pixel_on_meter)
-            ####
-            if pixel_on_meter == 0:
+            pixel_on_meter_down = float((sum(LIST) // len(LIST))) // width_of_line
+
+            if pixel_on_meter_down == 0:
                 continue
-            correct_y = (sm_pix_x / pixel_on_meter)
-            rospy.loginfo("correct_y: %s", correct_y)
+
+            # находим координаты целевой точки в локальной системе координат
+            correct_y = (sm_pix_y / pixel_on_meter_down)
+            correct_x = (sm_pix_x / pixel_on_meter_down) + 1.8
+
+            rospy.loginfo("correct_y: %s" %correct_y)
+        #******#
+
 
         allbinary_copy = warped.copy()
 
@@ -246,103 +346,30 @@ def main():
         # print(math.atan2((IndWhitesColumnU - midpoint_x), allbinary_copy.shape[0] // 2))
 
         # переводим кокальные координаты целевой точки в глобальные
-        x_glob, y_glob = transform_cord(yaw, (3.0, correct_y))
+        x_glob, y_glob = transform_cord(yaw, (correct_x, correct_y))
 
         goal_pose.pose.point.x = x_glob
         goal_pose.pose.point.y = y_glob
 
         # if drone_alt > 1.2:
-        goal_pose.pose.point.z = 2.0
+        goal_pose.pose.point.z = 1.56
         # elif drone_alt < 1.3:
         #     goal_pose.pose.point.z = 1.2
 
-
         # целевой курс в goal_pose -> yaw + math.atan2( -(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), 320)
         goal_pose.pose.course = yaw - math.atan2((IndWhitesColumnU - midpoint_x), cv_img.shape[0])
+
         goal_pose_pub.publish(goal_pose)
 
         if view_result_flag:
             cv.imshow("test1", warped)
             cv.imshow("test2", AllBinary_trapeze)
             cv.imshow("test3", allbinary_copy)
+            cv.imshow("test4", allbinary_copy_down)
 
 
-        #
-        #     # находим сумму всех элементов каждого столбца массива AllBinary в диапазоне от AllBinary.shape[0] // 2 до AllBinary.shape[0]
-        #     histogram_right = np.sum(AllBinary[:, AllBinary.shape[1] // 2: ], axis = 1)
-        #     histogram_left = np.sum(AllBinary[:, :AllBinary.shape[1] // 2], axis = 1)
-        #
-        #     # найдём координаты центра кадра
-        #     midpoint_y = cv_img.shape[0] // 2
-        #     midpoint_x = cv_img.shape[1] // 2
-        #
-        #     IndWhitesColumnR = np.argmax(histogram_right) # [:histogram.shape[0]//2]
-        #     IndWhitesColumnL = np.argmax(histogram_left)  # [:histogram.shape[0]//2]
-        #
-        #     allbinary_copy = AllBinary.copy()
-        #
-        #     cv.line(allbinary_copy, (0, allbinary_copy.shape[0] // 2), (allbinary_copy.shape[1], allbinary_copy.shape[0] // 2), 200, 2)                 # рисуем статическую горизонталь
-        #
-        #     cv.line(allbinary_copy, (allbinary_copy.shape[1] // 2, allbinary_copy.shape[0] // 2), (allbinary_copy.shape[1], IndWhitesColumnR), 180, 2)
-        #     cv.line(allbinary_copy, (0, IndWhitesColumnL), (allbinary_copy.shape[1] // 2, allbinary_copy.shape[0] // 2), 180, 2)
-        #
-        #
-        #
-        #     # НАХОДИМ КОНТУРЫ
-        #     contours, hierarchy = cv.findContours(AllBinary[:,AllBinary.shape[1] // 2 : AllBinary.shape[1]], cv.RETR_TREE, cv.CHAIN_APPROX_NONE)            # AllBinary[:,AllBinary.shape[1] // 2 : AllBinary.shape[1]]     AllBinary.shape[1] // 2 : AllBinary.shape[1]
-        #
-        #     if len(contours):
-        #         # сортируем контуры
-        #         contours = sorted(contours, key = cv.contourArea, reverse = True)
-        #
-        #         cords_of_rect = cv.boundingRect(contours[0])
-        #         cords_of_rect = [cords_of_rect[0] + AllBinary.shape[1] // 2 , cords_of_rect[1], cords_of_rect[2], cords_of_rect[3]]
-        #
-        #         # вычленяем массив контуров из переменной contours
-        #         # cv.drawContours(cv_img, contours, -1, (0, 180, 255), 1)
-        #         cv.rectangle(cv_img, (cords_of_rect[0], cords_of_rect[1]), (cords_of_rect[0] + cords_of_rect[2], cords_of_rect[1] + cords_of_rect[3]), (255, 0, 0), 1)                  # возвращает кортеж в формате  (x, y, w, h)
-        #         cv.circle(cv_img, ((cords_of_rect[0] + cords_of_rect[2] // 2) , (cords_of_rect[1] + cords_of_rect[3] // 2) ), 10, (0, 255, 0), -10)
-        #
-        #         LIST = recalculation_cords(AllBinary)
-        #
-        #         sm_pix_y = float(-(cords_of_rect[1] + cords_of_rect[3] // 2) + midpoint_y)          # вычисляем смещение от центра кадра в пикселях по y
-        #         sm_pix_x = float((cords_of_rect[0] + cords_of_rect[2] // 2) - midpoint_x)           # вычисляем смещение от центра кадра в пикселях по x
-        #
-        #         # находим коэффициент пиксель на метр
-        #         pixel_on_meter = float((sum(LIST) // len(LIST))) // width_of_line
-        #
-        #         # находим координаты целевой точки в локальной системе координат
-        #         correct_y = (sm_pix_y / pixel_on_meter) + 1.0
-        #         correct_x = (sm_pix_x / pixel_on_meter) + 1.0
-        #
-        #         # отображаем линию масштаба - теоретически линия на кадре показывает МЕТР
-        #         cv.line(cv_img, (cv_img.shape[1], 0), (cv_img.shape[1], int(pixel_on_meter)), (255, 0, 255), 10)
-        #         cv.imshow("Image", cv_img)
-        #
-        #         # переводим кокальные координаты целевой точки в глобальные
-        #         x_glob, y_glob = transform_cord(yaw, (correct_x, correct_y))
-        #
-        #         goal_pose.pose.point.x = x_glob
-        #         goal_pose.pose.point.y = y_glob
-        #
-        #         if drone_alt > 1.2:
-        #             goal_pose.pose.point.z = drone_pose.pose.position.z
-        #         elif drone_alt < 1.3:
-        #             goal_pose.pose.point.z = 1.2
-        #
-        #
-        #         # целевой курс в goal_pose -> yaw + math.atan2( -(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), 320)
-        #         goal_pose.pose.course = yaw + math.atan2(-(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), cv_img.shape[1] // 2)
-        #         # goal_pose_pub.publish(goal_pose)
-        #
-        #         # cv.imshow("test_test", allbinary_copy)
-        #     else:
-        #         rospy.loginfo("Need line")
-        # else:
-        #     rospy.loginfo("STOP!")
-        #
-        # except:
-        #     print "Main function has an error"
+
+
         hz.sleep()
         # проверяем была ли нажата кнопка esc
         if cv.waitKey(1) == 27:
