@@ -1,5 +1,9 @@
 <launch>
 
+<!--run down camera server-->
+    <include file="$(find opencv_drone)/launch/mono_cam.launch">
+    </include>
+
 <!-- Run frame detector -->
 <node pkg="opencv_drone" type="FrameDetector_v2.py" name="frame_detector_node">
 
@@ -13,7 +17,7 @@
 </node>
 
 <!-- Run fly by line -->
-<node pkg="opencv_drone" type="fly_by_line.py" name="fly_by_line">
+<node pkg="opencv_drone" type="fly_by_line.py" name="fly_by_line" respawn="true">
 
     <param name="cam_img_topic" value="/r200/image_raw"/>
     
@@ -26,10 +30,20 @@
     <param name="maxg" value="0"/>
     <param name="maxr" value="0"/>
     
-    <param name="h_trapeze" value="100"/>
+    <param name="minb_down" value="0"/>
+    <param name="ming_down" value="0"/>
+    <param name="minr_down" value="0"/>
+    
+    <param name="maxb_down" value="100"/>
+    <param name="maxg_down" value="70"/>
+    <param name="maxr_down" value="64"/>
+    
+    <param name="h_trapeze" value="50"/>
     <param name="cut_tr" value="100"/>    
     
     <param name="x_forvard" value="3.0"/>
 </node>
+
+
 
 </launch>
