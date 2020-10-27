@@ -65,11 +65,21 @@ def main():
                 # переводим картинку с камеры из формата BGR в HSV
                 # hsv = cv_img
 
-                # r_channel = cv_img[ :, :, 2]
                 # hsv = r_channel
-                # cv.imshow("r_chnl", r_channel)
-                # h = cv.cvtColor(cv_img, cv.COLOR_BGR2HLS)
+                hls = cv.cvtColor(cv_img, cv.COLOR_BGR2HLS)
                 # cv.imshow('frame', hsv) # выводим картинку с камеры в формате HSV на экран
+                r_channel = hls[ :, :, 1]
+                binary_s = np.zeros_like(r_channel)
+                binary_s[(r_channel < 25)] = 255
+
+                # Уменьшаем контуры белых объектов - делаем две итерации
+                maskEr = cv.erode(binary_s, None, iterations=1)
+                # cv.imshow("Erode", maskEr)
+
+                # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем две итерации
+                binary_s = cv.dilate(maskEr, None, iterations=1)
+                # cv.imshow('Dilate', maskDi)
+                cv.imshow("binary_s", binary_s)
 
                 # получаем значения задаваемые бегунками
                 minb = cv.getTrackbarPos('minb', 'result')          #maxb = 118/119
@@ -84,15 +94,13 @@ def main():
                 # hsv = cv.blur(hsv, (4, 4))
                 # cv.imshow('Blur', hsv)
 
-
-
                 # делаем бинаризацию картинки и пихаем её в переменную mask
                 mask = cv.inRange(cv_img, (minb, ming, minr), (maxb, maxg, maxr))         #mask = cv.inRange(cv_img, (minb, ming, minr), (maxb, maxg, maxr))
                 # cv.imshow('mask', mask)
 
                 # Уменьшаем контуры белых объектов - делаем две итерации
                 maskEr = cv.erode(mask, None, iterations=3)
-                cv.imshow("Erode", maskEr)
+                # cv.imshow("Erode", maskEr)
 
                 # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем две итерации
                 maskDi = cv.dilate(maskEr, None, iterations=3)

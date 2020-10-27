@@ -38,6 +38,9 @@
     <param name="maxg_down" value="70"/>
     <param name="maxr_down" value="64"/>
     
+    <param name="limit_r_channel" value="40"/>
+
+    
     <param name="h_trapeze" value="50"/>
     <param name="cut_tr" value="100"/>    
     

@@ -53,6 +53,8 @@ maxb_down = 100
 maxg_down = 70
 maxr_down = 64
 
+limit_r_channel = 100
+
 ros_img = None
 ros_img_down = None
 quaternion = None
@@ -67,8 +69,7 @@ reshape_trapeze_cords = np.float32([[0, image_size[1]], [image_size[1], image_si
 
 # берем конфигурацию основных переменных из сервера параметров ROS
 def get_params_server():
-    global view_result_flag, image_width_px, image_height_px, maxb, maxg, maxr, h_trapeze, cut_tr, cam_img_topic, x_forvard, minb_down, ming_down, minr_down, maxb_down, maxg_down, maxr_down
-
+    global view_result_flag, image_width_px, image_height_px, maxb, maxg, maxr, h_trapeze, cut_tr, cam_img_topic, x_forvard, minb_down, ming_down, minr_down, maxb_down, maxg_down, maxr_down, limit_r_channel
     cam_img_topic = rospy.get_param('~cam_img_topic', cam_img_topic)
 
     maxb = rospy.get_param('~maxb', maxb)
@@ -82,6 +83,8 @@ def get_params_server():
     maxb_down = rospy.get_param('~maxb_down', maxb_down)
     maxg_down = rospy.get_param('~maxg_down', maxg_down)
     maxr_down = rospy.get_param('~maxr_down', maxr_down)
+
+    limit_r_channel = rospy.get_param('~limit_r_channel', limit_r_channel)
 
     h_trapeze = rospy.get_param('~h_trapeze', h_trapeze)
     cut_tr = rospy.get_param('~cut_tr', cut_tr)
@@ -174,7 +177,22 @@ def main():
 
 
         AllBinary = cv.inRange(cv_img, (minb, ming, minr), (maxb, maxg, maxr))
-        AllBinary_down = cv.inRange(cv_img_down, (minb_down, ming_down, minr_down), (maxb_down, maxg_down, maxr_down))
+
+        hls = cv.cvtColor(cv_img_down, cv.COLOR_BGR2HLS)
+        # cv.imshow('frame', hsv) # выводим картинку с камеры в формате HSV на экран
+        r_channel = hls[:, :, 1]
+        binary_s = np.zeros_like(r_channel)
+        binary_s[(r_channel < limit_r_channel)] = 255
+
+        # Уменьшаем контуры белых объектов - делаем две итерации
+        maskEr = cv.erode(binary_s, None, iterations=1)
+        # cv.imshow("Erode", maskEr)
+
+        # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем две итерации
+        AllBinary_down = cv.dilate(maskEr, None, iterations=1)
+        # cv.imshow('Dilate', maskDi)
+
+        # AllBinary_down = cv.inRange(cv_img_down, (minb_down, ming_down, minr_down), (maxb_down, maxg_down, maxr_down))
 
         #####
         # извлекаем КРАСНЫЙ канал из кадра видеопотока
