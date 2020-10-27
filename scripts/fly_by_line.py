@@ -197,7 +197,7 @@ def main():
         #___Приступаем к вычислению смещения коптера от линии___#
 
         # НАХОДИМ КОНТУРЫ
-        contours, hierarchy = cv.findContours(warped, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)           # [AllBinary.shape[0] // 2 + 200:, :]
+        contours, hierarchy = cv.findContours(warped[240:, :], cv.RETR_TREE, cv.CHAIN_APPROX_NONE)           # [AllBinary.shape[0] // 2 + 200:, :]
 
         if len(contours):
             # сортируем контуры

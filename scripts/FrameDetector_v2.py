@@ -6,8 +6,6 @@ import numpy as np
 import rospy
 from copy import deepcopy
 import math
-# import tf
-# import pyrealsense2 as rs
 import tf
 
 
@@ -137,8 +135,6 @@ def depth_image_cb(data):
         # print("AFTER",depth_frame[-1][-1])
 
         # depth_frame = np.uint8(depth_frame)
-
-
     except:
         print ("Error read depth image")
         image_binary = None
@@ -235,13 +231,13 @@ def calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height, widt
 
     # Находим точку p, удаленную от центра рамки на величину 1,25*width к дрону по направлению нормали
     n_norm = math.sqrt(math.pow(nx, 2) + math.pow(ny, 2) + math.pow(nz, 2))
-    px1 = x_c - nx * 1.25 * width / n_norm
-    py1 = y_c - ny * 1.25 * width / n_norm
-    pz1 = z_c - nz * 1.25 * width / n_norm
+    px1 = x_c - nx * 1.5 * width / n_norm
+    py1 = y_c - ny * 1.5 * width / n_norm
+    pz1 = z_c - nz * 1.5 * width / n_norm
 
-    px2 = x_c + nx * 1.25 * width / n_norm
-    py2 = y_c + ny * 1.25 * width / n_norm
-    pz2 = z_c + nz * 1.25 * width / n_norm
+    px2 = x_c + nx * 1.5 * width / n_norm
+    py2 = y_c + ny * 1.5 * width / n_norm
+    pz2 = z_c + nz * 1.5 * width / n_norm
 
     d1 = math.sqrt(math.pow(px1, 2) + math.pow(py1, 2) + math.pow(pz1, 2))
     d2 = math.sqrt(math.pow(px2, 2) + math.pow(py2, 2) + math.pow(pz2, 2))
@@ -323,7 +319,7 @@ def transform_cords_3D(X, Y, Z, roll, pitch, yaw, goal_):
 
     local_cords_0 = np.array([goal_.x0, goal_.y0, goal_.z0])
     local_cords_1 = np.array([goal_.x1, goal_.y1, goal_.z1])
-    local_cords_2 = np.array([goal_.x1 + 1.25, goal_.y1, goal_.z1])
+    local_cords_2 = np.array([goal_.x1 + 1.50, goal_.y1, goal_.z1])
 
     transpose_cord = local_cords_0.reshape(3, 1)
 
@@ -341,7 +337,7 @@ def transform_cords_3D(X, Y, Z, roll, pitch, yaw, goal_):
     glob_cords_of_point2 = [glob_cords_of_point2[0] + X, glob_cords_of_point2[1] + Y, glob_cords_of_point2[2] + Z]
 
 
-    glob_cords_of_points = [glob_cords_of_point0, glob_cords_of_point1, glob_cords_of_point2]
+    glob_cords_of_points = [glob_cords_of_point1, glob_cords_of_point2]
 
     # print "glob_cords -> ", glob_cords_of_point
     return glob_cords_of_points
@@ -415,7 +411,7 @@ def main():
 
                 if view_result_flag:
                     cv.imshow("test", edges)
-
+                    cv.imshow("depth", depth_frame)
             except:
                 continue
 
@@ -513,12 +509,16 @@ def main():
 
                             point0 = Point(x=goal_.x0, y=goal_.y0, z=goal_.z0)
                             point1 = Point(x=goal_.x1, y=goal_.y1, z=goal_.z1)
+                            point2 = Point(x=goal_.x1 + 1.5, y=goal_.y1, z=goal_.z1)
 
                             marker0 = make_marker(point0, 0)
                             marker1 = make_marker(point1, 1)
+                            marker2 = make_marker(point2, 2)
 
                             marker_publisher.publish(marker0)
                             marker_publisher.publish(marker1)
+                            marker_publisher.publish(marker2)
+
                             rospy.loginfo('pub marker')
 
                             #################################
