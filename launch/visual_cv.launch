@@ -1,14 +1,6 @@
 <launch>
 
-<!--run down camera server-->
-<<<<<<< HEAD
-    <include file="$(find camera_calibrate_mono)/launch/mono_cam.launch">
-    </include>
 
-<!-- Run frame detector -->
-<!--
-<node pkg="opencv_drone" type="FrameDetector_v2.py" name="frame_detector_node">
-=======
 <include file="$(find camera_calibrate_mono)/launch/mono_cam.launch">
 </include>
 
@@ -16,7 +8,6 @@
 
 <!--
 <node pkg="opencv_drone" type="FrameDetector_v2.py" name="frame_detector_node" respawn="true" output="screen">
->>>>>>> 21bd699f5a8df0c3a9f4e26ecc542cb786519b29
 
     <param name="depth_image_topic" value="/d400/aligned_depth_to_color/image_raw"/>
     
@@ -27,19 +18,12 @@
 
 </node>
 -->
-<<<<<<< HEAD
-=======
-
->>>>>>> 21bd699f5a8df0c3a9f4e26ecc542cb786519b29
 
 <!-- Run fly by line -->
 <node pkg="opencv_drone" type="fly_by_line.py" name="fly_by_line" respawn="true" output="screen">
 
     <param name="cam_img_topic" value="/d400/color/image_raw"/>
-<<<<<<< HEAD
-=======
     <param name="cam_down_img_topic" value="/mono_cam_down/camera_mono/image_raw"/>
->>>>>>> 21bd699f5a8df0c3a9f4e26ecc542cb786519b29
     
     <param name="view_result_flag" value="false"/>
     
