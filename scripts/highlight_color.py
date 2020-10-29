@@ -8,7 +8,7 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 import numpy as np
 # топики
-cam_topic = "/mono_cam_forward/camera_mono/image_raw"
+cam_topic = "/mono_cam_down/camera_mono/image_raw"  #/mono_cam_down/camera_mono/image_raw"
 ros_img = Image()
 
 def img_cb(data):
@@ -69,8 +69,9 @@ def main():
                 hls = cv.cvtColor(cv_img, cv.COLOR_BGR2HLS)
                 # cv.imshow('frame', hsv) # выводим картинку с камеры в формате HSV на экран
                 r_channel = hls[ :, :, 1]
+                cv.imshow("din", r_channel)
                 binary_s = np.zeros_like(r_channel)
-                binary_s[(r_channel < 25)] = 255
+                binary_s[(r_channel < 80)] = 255
 
                 # Уменьшаем контуры белых объектов - делаем две итерации
                 maskEr = cv.erode(binary_s, None, iterations=1)
@@ -93,6 +94,8 @@ def main():
                 # делаем размытие картинки HSV
                 # hsv = cv.blur(hsv, (4, 4))
                 # cv.imshow('Blur', hsv)
+
+                # hsv = cv.cvtColor(cv_img, cv.COLOR_BGR2HLS)
 
                 # делаем бинаризацию картинки и пихаем её в переменную mask
                 mask = cv.inRange(cv_img, (minb, ming, minr), (maxb, maxg, maxr))         #mask = cv.inRange(cv_img, (minb, ming, minr), (maxb, maxg, maxr))
