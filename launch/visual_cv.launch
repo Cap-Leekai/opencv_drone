@@ -1,29 +1,47 @@
 <launch>
 
 <!--run down camera server-->
+<<<<<<< HEAD
     <include file="$(find camera_calibrate_mono)/launch/mono_cam.launch">
     </include>
 
 <!-- Run frame detector -->
 <!--
 <node pkg="opencv_drone" type="FrameDetector_v2.py" name="frame_detector_node">
+=======
+<include file="$(find camera_calibrate_mono)/launch/mono_cam.launch">
+</include>
+
+<!-- Run frame detector -->
+
+<!--
+<node pkg="opencv_drone" type="FrameDetector_v2.py" name="frame_detector_node" respawn="true" output="screen">
+>>>>>>> 21bd699f5a8df0c3a9f4e26ecc542cb786519b29
 
     <param name="depth_image_topic" value="/d400/aligned_depth_to_color/image_raw"/>
     
     <param name="view_result_flag" value="false"/>
     
-    <param name="image_width_px" value="1280"/>
-    <param name="image_height_px" value="720"/>
+    <param name="image_width_px" value="640"/>
+    <param name="image_height_px" value="480"/>
 
 </node>
 -->
+<<<<<<< HEAD
+=======
+
+>>>>>>> 21bd699f5a8df0c3a9f4e26ecc542cb786519b29
 
 <!-- Run fly by line -->
-<node pkg="opencv_drone" type="fly_by_line.py" name="fly_by_line" respawn="true">
+<node pkg="opencv_drone" type="fly_by_line.py" name="fly_by_line" respawn="true" output="screen">
 
     <param name="cam_img_topic" value="/d400/color/image_raw"/>
+<<<<<<< HEAD
+=======
+    <param name="cam_down_img_topic" value="/mono_cam_down/camera_mono/image_raw"/>
+>>>>>>> 21bd699f5a8df0c3a9f4e26ecc542cb786519b29
     
-    <param name="view_result_flag" value="true"/>
+    <param name="view_result_flag" value="false"/>
     
     <param name="image_width_px" value="1280"/>
     <param name="image_height_px" value="720"/>
@@ -40,11 +58,11 @@
     <param name="maxg_down" value="139"/>
     <param name="maxr_down" value="105"/>
     
-    <param name="limit_r_channel" value="40"/>
-
+    <param name="limit_r_channel" value="100"/>
+    <param name="limit_f_channel" value="80"/>
     
-    <param name="h_trapeze" value="50"/>
-    <param name="cut_tr" value="100"/>    
+    <param name="h_trapeze" value="100"/>
+    <param name="cut_tr" value="170"/>    
     
     <param name="x_forvard" value="1.8"/>
 </node>

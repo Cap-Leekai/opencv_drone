@@ -13,7 +13,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped, Point
-
+from opencv_drone.msg import frame_detect
 
 from drone_msgs.msg import Goal                 	#kill#
 
@@ -21,7 +21,9 @@ drone_pose_topic = "/mavros/local_position/pose"        #kill#
 
 depth_image_topic = "/d400/depth/image_rect_raw"     	#/camera/aligned_depth_to_infra1/image_raw
 image_topic = "/d400/color/image_raw"
+
 drone_goal_pose = "/goal_pose"          #kill#
+frame_detect_topic = "/frame_detector"
 
 view_result_flag = False
 debug_prints = False
@@ -32,6 +34,7 @@ depth_frame = None
 image_binary = None
 rgb_image = None
 
+yaw_error = 0.0
 old_time = 0.0
 last_area = 0.0
 l = 1.1                # Плечо рамки в метрах
@@ -41,7 +44,7 @@ image_width_px = 1280
 image_height_px = 720
 
 goal_pose = Goal()
-
+frame_detect_flag = frame_detect()
 
 # классы для функции пролета в рамку
 class goal:
@@ -78,27 +81,6 @@ def rgb_image_cb(data):
         rgb_image = None
 
 
-# def valmap(value, istart, istop, ostart, ostop, clip_flag = True):
-#     """
-#     Re-maps a number from one range to another.
-#     That is, a value of istart would get mapped to ostart,
-#     a value of istop to ostop, values in-between to values in-between, etc.
-#     :param value: value
-#     :param istart:  the lower bound of the value’s current range
-#     :param istop: the upper bound of the value’s current range
-#     :param ostart: the lower bound of the value’s target range
-#     :param ostop: the upper bound of the value’s target range
-#     :return: The mapped value.
-#     """
-#     try:
-#         val = ostart + (ostop - ostart) * ((value - istart) / (istop - istart))
-#     except:
-#         print("map error", value, istart, istop, ostart, ostop)
-#         val = 0.0
-#     if clip_flag:
-#         return np.clip(val, ostart, ostop)
-#     else:
-#         return val
 # берем конфигурацию основных переменных из сервера параметров ROS
 def get_params_server():
     global depth_image_topic, view_result_flag, image_width_px, image_height_px
@@ -121,14 +103,16 @@ def depth_image_cb(data):
 
         image_binary = np.zeros_like(depth_frame)
         # делаем маску из допустимых пикселей на основе условия
+
         image_binary[(depth_frame < 3000.0) & (depth_frame > 100.0)] = 255          #3000:100
+
         # print 1
         image_binary = np.array(image_binary, dtype=np.uint8)
         # for i in range(len(image_binary)):
         #     print image_binary[i]
         # cv.imshow("hhh", image_binary)
         # делаем размытие картинки image_binary
-        image_binary = cv.blur(image_binary, (15, 15))
+        # image_binary = cv.blur(image_binary, (15, 15))
 
         # print("BEFORe",depth_frame[-1][-1])@
         # depth_frame = valmap(depth_frame, 0, 10000, 0, 255)
@@ -153,6 +137,7 @@ def drone_pose_cb(data):
     # print("pitch-> ", pitch)
 
 def calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height, width):
+    global ang
     '''
     Функция от В.В.
     '''
@@ -277,7 +262,7 @@ def calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height, widt
     goal_.y1 = y_c
     goal_.z1 = z_c
 
-    print("ANGLE: %s" %ang)
+    # print("ANGLE: %s" %ang)
 
     # if ang > 170 * math.pi / 180:
     #     goal_.x0 = x_c
@@ -313,19 +298,18 @@ def make_marker(point, id):
     return marker
 
 
-def transform_cords_3D(X, Y, Z, roll, pitch, yaw, goal_):
-
-    glob_cords = np.array([X, Y, Z])
+def transform_cords_3D(X, Y, Z, roll, pitch, yaw, goal_, yaw_error):
+    # glob_cords = np.array([X, Y, Z])
 
     local_cords_0 = np.array([goal_.x0, goal_.y0, goal_.z0])
     local_cords_1 = np.array([goal_.x1, goal_.y1, goal_.z1])
-    local_cords_2 = np.array([goal_.x1 + 1.50, goal_.y1, goal_.z1])
+    local_cords_2 = np.array([goal_.x1 + 1.5 * math.cos(yaw_error), goal_.y1 + 1.5 * math.sin(yaw_error), goal_.z1])
 
     transpose_cord = local_cords_0.reshape(3, 1)
-
     matrix_R = np.array([[math.cos(roll) * math.cos(yaw) - math.sin(roll) * math.cos(pitch) * math.sin(yaw), - math.cos(roll) * math.sin(yaw) - math.sin(roll) * math.cos(pitch) * math.cos(yaw), math.sin(roll) * math.sin(pitch)],
                          [math.sin(roll) * math.cos(yaw) + math.cos(roll) * math.cos(pitch) * math.sin(yaw), - math.sin(roll) * math.sin(yaw) + math.cos(roll) * math.cos(pitch) * math.cos(yaw), - math.cos(roll) * math.sin(pitch)],
                          [math.sin(pitch) * math.sin(yaw), math.sin(pitch) * math.cos(yaw), math.cos(pitch)]])
+
 
     glob_cords_of_point0 = np.dot(matrix_R, local_cords_0)
     glob_cords_of_point1 = np.dot(matrix_R, local_cords_1)
@@ -336,7 +320,6 @@ def transform_cords_3D(X, Y, Z, roll, pitch, yaw, goal_):
     glob_cords_of_point1 = [glob_cords_of_point1[0] + X, glob_cords_of_point1[1] + Y, glob_cords_of_point1[2] + Z]
     glob_cords_of_point2 = [glob_cords_of_point2[0] + X, glob_cords_of_point2[1] + Y, glob_cords_of_point2[2] + Z]
 
-
     glob_cords_of_points = [glob_cords_of_point0, glob_cords_of_point1, glob_cords_of_point2]
 
     # print "glob_cords -> ", glob_cords_of_point
@@ -344,7 +327,7 @@ def transform_cords_3D(X, Y, Z, roll, pitch, yaw, goal_):
 
 
 def trajectory_publisher(trajectory, yaw_error):
-    global goal_pose_pub, drone_pose
+    global goal_pose_pub, drone_pose, detect_frame_publisher, frame_detect_flag
 
     flag_corrector_course = False
 
@@ -361,7 +344,7 @@ def trajectory_publisher(trajectory, yaw_error):
             goal_pose.pose.point.y = y
             goal_pose.pose.point.z = z
 
-            print z
+            # print z
 
             if flag_corrector_course is not True:
                 goal_pose.pose.course = yaw + yaw_error
@@ -378,11 +361,13 @@ def trajectory_publisher(trajectory, yaw_error):
                 else:
                     break
         else:
+            frame_detect_flag.detect_frame = False
+            detect_frame_publisher.publish(frame_detect_flag)
             break
 
 
 def main():
-    global old_time, last_area, goal_pose, goal_pose_pub
+    global old_time, last_area, goal_pose, goal_pose_pub, detect_frame_publisher
     rospy.init_node("Frame_detector_node")
     hz = rospy.Rate(30)
 		
@@ -393,7 +378,7 @@ def main():
 #    rospy.Subscriber(image_topic, Image, rgb_image_cb)
     
     rospy.Subscriber(drone_pose_topic, PoseStamped, drone_pose_cb)  #kill#
-
+    detect_frame_publisher = rospy.Publisher(frame_detect_topic, frame_detect, queue_size=10)
 
     # init publishers
     goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size=10)       #Kill#
@@ -401,8 +386,7 @@ def main():
     marker_publisher = rospy.Publisher('window_target_marker', Marker)
 
     while not rospy.is_shutdown():
-        # try:
-        # pass
+
         if depth_frame is not None and image_binary is not None:
             try:
 		
@@ -412,7 +396,8 @@ def main():
 
                 if view_result_flag:
                     cv.imshow("test", edges)
-                    cv.imshow("depth", depth_frame)
+                    cv.imshow("depth", image_binary)
+
             except:
                 continue
             
@@ -444,18 +429,18 @@ def main():
                 dt = rospy.get_time() - old_time
                 old_time = rospy.get_time()
                 # print ("asd", (cv.contourArea(approx) - last_area))
+                if dt == 0.0:
+                    continue
+
                 Ft = ((cv.contourArea(approx) - last_area) / 1000) / dt
                 last_area = cv.contourArea(approx)
 
                 # rospy.loginfo("Ft: %s" %abs(Ft))
 
-                # if Ft > 100.0:
-                #     rospy.loginfo("Area pick!")
-                #     continue
+                if Ft > 80.0:
+                    rospy.loginfo("Area pick!")
+                    continue
                 ###
-
-
-
 
                 # rospy.loginfo(cv.contourArea(approx))
                 cv.drawContours(zeroes_mask, approx, -1, 255, 5)
@@ -469,7 +454,8 @@ def main():
 
                 if cv.contourArea(approx) > 30000. and corners is not None:
                     rospy.loginfo("Detect frame")
-                    window_detect_flag = True
+                    # window_detect_flag = True
+
                     try:
                         corners = corners.reshape(4, -1)
                         # рисуем маркеры в найденых точках
@@ -500,27 +486,14 @@ def main():
                         dist = dist / 1000
 			print dist
                         # проверяем есть ли нули в массиве дистанций, отсеиваем итерации с нулями
-                        if not 0.0 in dist:
+
+                        if not 0.0 in dist and np.min(dist) < 2.5:
                         #if not math.isnan(dist.max()):
                             print "DIST OK"
                             # rospy.loginfo(dist)
                             goal_ = calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height_of_drone, width_of_drone)
 
                             # print('x : ' + str(goal_.x0) + ', ' + 'y : ' + str(goal_.y0) + ', ' + 'z : ' + str(goal_.z0))
-
-                            point0 = Point(x=goal_.x0, y=goal_.y0, z=goal_.z0)
-                            point1 = Point(x=goal_.x1, y=goal_.y1, z=goal_.z1)
-                            point2 = Point(x=goal_.x1 + 1.5, y=goal_.y1, z=goal_.z1)
-
-                            marker0 = make_marker(point0, 0)
-                            marker1 = make_marker(point1, 1)
-                            marker2 = make_marker(point2, 2)
-
-                            marker_publisher.publish(marker0)
-                            marker_publisher.publish(marker1)
-                            marker_publisher.publish(marker2)
-
-                            rospy.loginfo('pub marker')
 
                             #################################
                             # находим координату вектора от точки перед рамкой до точки в центре рамки относительно 0 точки системы координат
@@ -532,13 +505,33 @@ def main():
                             if goal_vect.y0 < 0:
                                 yaw_error = -yaw_error
 
+                            frame_detect_flag.detect_frame = True
+                            detect_frame_publisher.publish(frame_detect_flag)
+
+                            try:
+                                point0 = Point(x=goal_.x0, y=goal_.y0, z=goal_.z0)
+                                point1 = Point(x=goal_.x1, y=goal_.y1, z=goal_.z1)
+                                point2 = Point(x=goal_.x1 + 1.5 * math.cos(yaw_error), y=goal_.y1 + 1.5 * math.sin(yaw_error), z=goal_.z1)
+
+                                marker0 = make_marker(point0, 0)
+                                marker1 = make_marker(point1, 1)
+                                marker2 = make_marker(point2, 2)
+
+                                marker_publisher.publish(marker0)
+                                marker_publisher.publish(marker1)
+                                marker_publisher.publish(marker2)
+
+                                rospy.loginfo('pub marker')
+                            except:
+                                pass
+
                             # rospy.loginfo("yaw_error: %s" %yaw_error)
                             #################################
 
                             #******#
-                            trajectory = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y,
-                                                       drone_pose.pose.position.z, 0.0, 0.0, yaw, goal_)
-#                            trajectory_publisher(trajectory, yaw_error)
+                            trajectory = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y, drone_pose.pose.position.z, 0.0, 0.0, yaw, goal_)
+#                           trajectory_publisher(trajectory, yaw_error)
+
                             #******#
                         else:
                             rospy.loginfo("DIST IS NOT OK! NAN")
