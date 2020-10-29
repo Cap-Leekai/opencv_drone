@@ -18,8 +18,10 @@ from opencv_drone.msg import frame_detect
 
 
 # инициализация топиков
-cam_img_topic = "/d400/color/image_raw"                             # топик нижней камеры
-cam_down_img_topic = "/mono_cam_down/camera_mono/image_raw"
+
+cam_img_topic = "/d400/color/image_raw"                                   # топик нижней камеры
+cam_down_img_topic = "/mono_cam_forward/camera_mono/image_raw"
+
 drone_pose_topic = "/mavros/local_position/pose"                    # топик текущей позиции
 drone_goal_pose = "/goal_pose"
 frame_detect_topic = "/frame_detector"

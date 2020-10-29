@@ -1,6 +1,6 @@
 <launch>
 
-<!--run down camera server-->
+
 <include file="$(find camera_calibrate_mono)/launch/mono_cam.launch">
 </include>
 
@@ -9,7 +9,7 @@
 <!--
 <node pkg="opencv_drone" type="FrameDetector_v2.py" name="frame_detector_node" respawn="true" output="screen">
 
-    <param name="depth_image_topic" value="/r200/depth/image_raw"/>
+    <param name="depth_image_topic" value="/d400/aligned_depth_to_color/image_raw"/>
     
     <param name="view_result_flag" value="false"/>
     
@@ -18,7 +18,6 @@
 
 </node>
 -->
-
 
 <!-- Run fly by line -->
 <node pkg="opencv_drone" type="fly_by_line.py" name="fly_by_line" respawn="true" output="screen">
@@ -39,9 +38,9 @@
     <param name="ming_down" value="0"/>
     <param name="minr_down" value="0"/>
     
-    <param name="maxb_down" value="100"/>
-    <param name="maxg_down" value="70"/>
-    <param name="maxr_down" value="64"/>
+    <param name="maxb_down" value="146"/>
+    <param name="maxg_down" value="139"/>
+    <param name="maxr_down" value="105"/>
     
     <param name="limit_r_channel" value="100"/>
     <param name="limit_f_channel" value="80"/>

@@ -13,16 +13,15 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped, Point
 from opencv_drone.msg import frame_detect
-
-from drone_msgs.msg import Goal                         #kill#
+from drone_msgs.msg import Goal                 	#kill#
 
 drone_pose_topic = "/mavros/local_position/pose"        #kill#
-depth_image_topic = "/d400/depth/image_rect_raw"        #/r200/depth/image_raw #/camera/aligned_depth_to_infra1/image_raw
-image_topic = "/camera/color/image_raw"
-drone_goal_pose = "/goal_pose"                          #kill#
+depth_image_topic = "/d400/depth/image_rect_raw"     	#/camera/aligned_depth_to_infra1/image_raw
+image_topic = "/d400/color/image_raw"
+drone_goal_pose = "/goal_pose"          #kill#
 frame_detect_topic = "/frame_detector"
 
-view_result_flag = True
+view_result_flag = False
 debug_prints = False
 
 marker_publisher = None
@@ -100,7 +99,9 @@ def depth_image_cb(data):
 
         image_binary = np.zeros_like(depth_frame)
         # делаем маску из допустимых пикселей на основе условия
+
         image_binary[(depth_frame < 3000.0) & (depth_frame > 100.0)] = 255          #3000:100
+
         # print 1
 
         image_binary = np.array(image_binary, dtype=np.uint8)
@@ -384,14 +385,14 @@ def trajectory_publisher(trajectory, yaw_error):
 def main():
     global old_time, last_area, goal_pose, goal_pose_pub, detect_frame_publisher
     rospy.init_node("Frame_detector_node")
-    # hz = rospy.Rate(50)
-
+    hz = rospy.Rate(30)
+		
     get_params_server()
 
     # init subscribers
     rospy.Subscriber(depth_image_topic, Image, depth_image_cb)
-    rospy.Subscriber(image_topic, Image, rgb_image_cb)
-
+#    rospy.Subscriber(image_topic, Image, rgb_image_cb)
+    
     rospy.Subscriber(drone_pose_topic, PoseStamped, drone_pose_cb)  #kill#
     detect_frame_publisher = rospy.Publisher(frame_detect_topic, frame_detect, queue_size=10)
 
@@ -413,7 +414,7 @@ def main():
 
             except:
                 continue
-
+            
             contours, _ = cv.findContours(edges, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
             if len(contours):
@@ -421,7 +422,7 @@ def main():
 
                 contours = sorted(contours, key=cv.contourArea, reverse=True)
                 # rospy.loginfo(len(contours))
-
+                
                 list_cnt = []
 
                 for i in contours:
@@ -507,6 +508,7 @@ def main():
                         # проверяем есть ли нули в массиве дистанций, отсеиваем итерации с нулями
                         if not 0.0 in dist and np.max(dist) < 3.0:
                         # if not math.isnan(dist.max()):
+
                             print "DIST OK"
                             rospy.loginfo(dist)
                             goal_ = calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height_of_drone, width_of_drone)
@@ -549,11 +551,13 @@ def main():
                             #******#
                             # trajectory = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y,drone_pose.pose.position.z, 0.0, 0.0, yaw, goal_, yaw_error)
                             # trajectory_publisher(trajectory, yaw_error)
+
                             #******#
                         else:
                             rospy.loginfo("DIST IS NOT OK! NAN")
                     except:
                         continue
+		    hz.sleep()
                 # rect = cv.minAreaRect(contours[1])
                 # box = cv.boxPoints(rect)  # cv2.boxPoints(rect) for OpenCV 3.x
                 # box = np.int0(box)
