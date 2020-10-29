@@ -15,15 +15,15 @@ from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped, Point
 
 
-from drone_msgs.msg import Goal                 #kill#
+from drone_msgs.msg import Goal                 	#kill#
 
 drone_pose_topic = "/mavros/local_position/pose"        #kill#
 
-depth_image_topic = "/r200/depth/image_raw"     #/camera/aligned_depth_to_infra1/image_raw
-image_topic = "/camera/color/image_raw"
+depth_image_topic = "/d400/depth/image_rect_raw"     	#/camera/aligned_depth_to_infra1/image_raw
+image_topic = "/d400/color/image_raw"
 drone_goal_pose = "/goal_pose"          #kill#
 
-view_result_flag = True
+view_result_flag = False
 debug_prints = False
 
 marker_publisher = None
@@ -121,7 +121,7 @@ def depth_image_cb(data):
 
         image_binary = np.zeros_like(depth_frame)
         # делаем маску из допустимых пикселей на основе условия
-        image_binary[(depth_frame < 5.0) & (depth_frame > 1.)] = 255          #3000:100
+        image_binary[(depth_frame < 3000.0) & (depth_frame > 100.0)] = 255          #3000:100
         # print 1
         image_binary = np.array(image_binary, dtype=np.uint8)
         # for i in range(len(image_binary)):
@@ -384,14 +384,14 @@ def trajectory_publisher(trajectory, yaw_error):
 def main():
     global old_time, last_area, goal_pose, goal_pose_pub
     rospy.init_node("Frame_detector_node")
-    # hz = rospy.Rate(50)
-
+    hz = rospy.Rate(30)
+		
     get_params_server()
 
     # init subscribers
     rospy.Subscriber(depth_image_topic, Image, depth_image_cb)
-    rospy.Subscriber(image_topic, Image, rgb_image_cb)
-
+#    rospy.Subscriber(image_topic, Image, rgb_image_cb)
+    
     rospy.Subscriber(drone_pose_topic, PoseStamped, drone_pose_cb)  #kill#
 
 
@@ -400,13 +400,12 @@ def main():
 
     marker_publisher = rospy.Publisher('window_target_marker', Marker)
 
-
     while not rospy.is_shutdown():
         # try:
         # pass
         if depth_frame is not None and image_binary is not None:
             try:
-
+		
                 edges = cv.Canny(image_binary, 150, 200)
                 # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем две итерации
                 edges = cv.dilate(edges, None, iterations=1)
@@ -416,14 +415,14 @@ def main():
                     cv.imshow("depth", depth_frame)
             except:
                 continue
-
+            
             contours, _ = cv.findContours(edges, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
             if len(contours):
                 zeroes_mask = np.zeros_like(image_binary)
                 contours = sorted(contours, key=cv.contourArea, reverse=True)
                 # rospy.loginfo(len(contours))
-
+                
                 list_cnt = []
                 for i in contours:
                     if cv.contourArea(i) > 30000.0:
@@ -498,11 +497,11 @@ def main():
                                          depth_frame[corners[2][1]][corners[2][0]],
                                          depth_frame[corners[3][1]][corners[3][0]]])
 
-                        # dist = dist / 1000
-
+                        dist = dist / 1000
+			print dist
                         # проверяем есть ли нули в массиве дистанций, отсеиваем итерации с нулями
-                        # if not 0.0 in dist:
-                        if not math.isnan(dist.max()):
+                        if not 0.0 in dist:
+                        #if not math.isnan(dist.max()):
                             print "DIST OK"
                             # rospy.loginfo(dist)
                             goal_ = calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height_of_drone, width_of_drone)
@@ -539,12 +538,13 @@ def main():
                             #******#
                             trajectory = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y,
                                                        drone_pose.pose.position.z, 0.0, 0.0, yaw, goal_)
-                            trajectory_publisher(trajectory, yaw_error)
+#                            trajectory_publisher(trajectory, yaw_error)
                             #******#
                         else:
                             rospy.loginfo("DIST IS NOT OK! NAN")
                     except:
                         continue
+		    hz.sleep()
                 # rect = cv.minAreaRect(contours[1])
                 # box = cv.boxPoints(rect)  # cv2.boxPoints(rect) for OpenCV 3.x
                 # box = np.int0(box)
