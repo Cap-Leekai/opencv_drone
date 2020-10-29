@@ -385,8 +385,9 @@ def trajectory_publisher(trajectory, yaw_error):
 def main():
     global old_time, last_area, goal_pose, goal_pose_pub, detect_frame_publisher
     rospy.init_node("Frame_detector_node")
+
     hz = rospy.Rate(30)
-		
+
     get_params_server()
 
     # init subscribers
@@ -554,9 +555,10 @@ def main():
 
                             #******#
                         else:
-                            rospy.loginfo("DIST IS NOT OK! NAN")
+                            rospy.loginfo("DIST IS NOT OK!")
                     except:
                         continue
+
 		    hz.sleep()
                 # rect = cv.minAreaRect(contours[1])
                 # box = cv.boxPoints(rect)  # cv2.boxPoints(rect) for OpenCV 3.x
