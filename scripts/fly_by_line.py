@@ -22,7 +22,7 @@ from opencv_drone.msg import frame_detect
 cam_img_topic = "/d400/color/image_raw"                                   # топик нижней камеры
 cam_down_img_topic = "/mono_cam_forward/camera_mono/image_raw"
 
-drone_pose_topic = "/mavros/local_position/pose"                    # топик текущей позиции
+drone_pose_topic = "/mavros/local_position/pose"                          # топик текущей позиции
 drone_goal_pose = "/goal_pose"
 frame_detect_topic = "/frame_detector"
 
@@ -56,8 +56,8 @@ maxb_down = 100
 maxg_down = 70
 maxr_down = 64
 
-limit_r_channel = 100
-limit_f_channel = 80
+limit_f_channel = 100
+limit_d_channel = 80
 
 ros_img = None
 ros_img_down = None
@@ -141,15 +141,15 @@ def drone_alt_cb(data):
 
 
 # колбэк для считывания картинки из ROS
-def cam_img_cb(data):
-    global ros_img
-    ros_img = data
-
-
-# колбэк для считывания картинки из ROS
 def cam_down_img_cb(data):
     global ros_img_down
     ros_img_down = data
+
+
+def cam_img_cb(data):
+    global ros_img
+    ros_img = data
+# колбэк для считывания картинки из ROS
 
 
 def detect_frame_cb(data):
@@ -196,17 +196,25 @@ def main():
             # создаем массив размером как r_channel
             binary_d = np.zeros_like(d_channel)
             # заносим соответствующие пиксели из r_channel, которые меньше 2 в массив binary_r со знаением 1
-            binary_d[(d_channel < limit_f_channel)] = 255
+            binary_d[(d_channel < limit_d_channel)] = 255
             # cv.imshow("dd", binary_d)
 
-            # AllBinary_down = cv.inRange(cv_img_down, (minb_down, ming_down, minr_down), (maxb_down, maxg_down, maxr_down))
+            erode_kernel = np.ones((20, 20), np.uint8)
+            kernel_CLOSE = np.ones((60, 60), np.uint8)
+
+            opening = cv.morphologyEx(binary_d, cv.MORPH_CLOSE, kernel_CLOSE)
+
+            opening = cv.erode(opening, erode_kernel, iterations=1)
+            binary_d = cv.dilate(opening, erode_kernel, iterations=1)
+
+        # AllBinary_down = cv.inRange(cv_img_down, (minb_down, ming_down, minr_down), (maxb_down, maxg_down, maxr_down))
 
             # извлекаем КРАСНЫЙ канал из кадра видеопотока
             f_channel = cv_img[:, :, 2]
             # создаем массив размером как r_channel
             binary_f = np.zeros_like(f_channel)
             # заносим соответствующие пиксели из r_channel, которые меньше 2 в массив binary_r со знаением 1
-            binary_f[(f_channel < limit_r_channel)] = 255
+            binary_f[(f_channel < limit_f_channel)] = 255
             # cv.imshow("hh", binary_r)
 
             # Фильтруем
@@ -244,6 +252,7 @@ def main():
             # ___Приступаем к вычислению смещения коптера от линии___ #
             #******#
             # Фильтруем
+
             # Уменьшаем контуры белых объектов - делаем две итерации
             AllBinary_down = cv.erode(binary_d, None, iterations=5)
             # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем 5 итераций

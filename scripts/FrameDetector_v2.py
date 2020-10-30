@@ -13,15 +13,15 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped, Point
 from opencv_drone.msg import frame_detect
-from drone_msgs.msg import Goal                 	#kill#
+from drone_msgs.msg import Goal                 	    #kill#
 
 drone_pose_topic = "/mavros/local_position/pose"        #kill#
 depth_image_topic = "/d400/depth/image_rect_raw"     	#/camera/aligned_depth_to_infra1/image_raw
 image_topic = "/d400/color/image_raw"
-drone_goal_pose = "/goal_pose"          #kill#
+drone_goal_pose = "/goal_pose"                          #kill#
 frame_detect_topic = "/frame_detector"
 
-view_result_flag = False
+view_result_flag = True
 debug_prints = False
 
 marker_publisher = None

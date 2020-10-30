@@ -65,21 +65,58 @@ def main():
                 # hsv = cv_img
 
                 # hsv = r_channel
+                # hls = cv.cvtColor(cv_img, cv.COLOR_BGR2GRAY)
                 hls = cv.cvtColor(cv_img, cv.COLOR_BGR2HLS)
+
                 # cv.imshow('frame', hsv) # выводим картинку с камеры в формате HSV на экран
                 r_channel = hls[ :, :, 1]
                 cv.imshow("din", r_channel)
                 binary_s = np.zeros_like(r_channel)
-                binary_s[(r_channel < 80)] = 255
+                binary_s[(r_channel < 60)] = 255
 
-                # Уменьшаем контуры белых объектов - делаем две итерации
-                maskEr = cv.erode(binary_s, None, iterations=1)
-                # cv.imshow("Erode", maskEr)
+                kernel = np.ones((10, 10), np.uint8)
+                erode_kernel = np.ones((20, 20), np.uint8)
+
+                kernel_CLOSE = np.ones((60, 60), np.uint8)
+                opening = cv.morphologyEx(binary_s, cv.MORPH_CLOSE, kernel_CLOSE)
+
+                opening = cv.erode(opening, erode_kernel, iterations=1)
+                opening = cv.dilate(opening, erode_kernel, iterations=1)
+
+
+
+                # # Уменьшаем контуры белых объектов - делаем две итерации
+                # # maskEr = cv.dilate(maskEr, erode_kernel, iterations=4)
+                #
+                # kernel_second = np.ones((50, 50), np.uint8)
+                # opening = cv.morphologyEx(maskEr, cv.MORPH_OPEN, kernel_second)
+                # opening = cv.dilate(opening, erode_kernel, iterations=1)
+
+
+
+
+                # opening = cv.erode(opening, erode_kernel, iterations=2)
+
+
+
 
                 # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем две итерации
-                binary_s = cv.dilate(maskEr, None, iterations=1)
+                # binary_s = cv.dilate(maskEr, None, iterations=1)
                 # cv.imshow('Dilate', maskDi)
-                cv.imshow("binary_s", binary_s)
+
+                # kernel_dilation = np.ones((10, 10), np.uint8)
+                #
+                # opening = cv.erode(binary_s, kernel_dilation, iterations=1)
+                #
+                # opening = cv.dilate(opening, kernel_dilation, iterations=1)
+
+
+
+
+
+                # opening = cv.erode(opening, kernel_dilation, iterations=1)
+
+                cv.imshow("opening", opening)
 
                 # получаем значения задаваемые бегунками
                 minb = cv.getTrackbarPos('minb', 'result')          #maxb = 118/119
@@ -118,7 +155,7 @@ def main():
                 #
                 # binary[(binary_hls < 120)] = 255
 
-                cv.imshow('result', mask)
+                # cv.imshow('result', mask)
 
                 # print(result)
                 if cv.waitKey(1) == 27: # проверяем была ли нажата кнопка esc
