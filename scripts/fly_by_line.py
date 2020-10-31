@@ -218,12 +218,12 @@ def main():
             # cv.imshow("hh", binary_r)
 
             # Фильтруем
-            # Уменьшаем контуры белых объектов - делаем две итерации
-            AllBinary = cv.erode(binary_f, None, iterations = 1)
-            # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем 5 итераций
-            AllBinary = cv.dilate(AllBinary, None, iterations = 1)
+            # # Уменьшаем контуры белых объектов - делаем две итерации
+            # AllBinary = cv.erode(binary_f, None, iterations = 1)
+            # # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем 5 итераций
+            # AllBinary = cv.dilate(AllBinary, None, iterations = 1)
 
-            AllBinary_trapeze = AllBinary.copy()
+            AllBinary_trapeze = binary_f.copy()
 
             # рисуем трапецию на AllBinary
             AllBinary_trapeze = cv.polylines(AllBinary_trapeze, [trapeze_cords_draw], True, 255)
@@ -234,7 +234,7 @@ def main():
             M = cv.getPerspectiveTransform(trapeze_cords, reshape_trapeze_cords)
 
             # преобразуем трапецию в полноценный кадр
-            warped = cv.warpPerspective(AllBinary, M, (image_size[1], image_size[0]), flags=cv.INTER_LINEAR)
+            warped = cv.warpPerspective(binary_f, M, (image_size[1], image_size[0]), flags=cv.INTER_LINEAR)
 
             # находим сумму всех элементов каждого столбца массива AllBinary в диапазоне от AllBinary.shape[0] // 2 до AllBinary.shape[0]
             histogram_curse = np.sum(warped[:, :], axis = 0)

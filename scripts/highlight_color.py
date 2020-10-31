@@ -8,7 +8,7 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 import numpy as np
 # топики
-cam_topic = "/mono_cam_down/camera_mono/image_raw"  #/mono_cam_down/camera_mono/image_raw"
+cam_topic = "/d400/color/image_raw"  #/mono_cam_down/camera_mono/image_raw"
 ros_img = Image()
 
 def img_cb(data):
@@ -72,7 +72,7 @@ def main():
                 r_channel = hls[ :, :, 1]
                 cv.imshow("din", r_channel)
                 binary_s = np.zeros_like(r_channel)
-                binary_s[(r_channel < 60)] = 255
+                binary_s[(r_channel < 100)] = 255
 
                 kernel = np.ones((10, 10), np.uint8)
                 erode_kernel = np.ones((20, 20), np.uint8)
@@ -80,8 +80,8 @@ def main():
                 kernel_CLOSE = np.ones((60, 60), np.uint8)
                 opening = cv.morphologyEx(binary_s, cv.MORPH_CLOSE, kernel_CLOSE)
 
-                opening = cv.erode(opening, erode_kernel, iterations=1)
-                opening = cv.dilate(opening, erode_kernel, iterations=1)
+                # opening = cv.erode(opening, erode_kernel, iterations=1)
+                # opening = cv.dilate(opening, erode_kernel, iterations=1)
 
 
 
@@ -116,7 +116,7 @@ def main():
 
                 # opening = cv.erode(opening, kernel_dilation, iterations=1)
 
-                cv.imshow("opening", opening)
+                cv.imshow("opening", binary_s)
 
                 # получаем значения задаваемые бегунками
                 minb = cv.getTrackbarPos('minb', 'result')          #maxb = 118/119
