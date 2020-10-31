@@ -74,7 +74,7 @@ reshape_trapeze_cords = np.float32([[0, image_size[1]], [image_size[1], image_si
 
 # берем конфигурацию основных переменных из сервера параметров ROS
 def get_params_server():
-    global view_result_flag, image_width_px, image_height_px, limit_f_channel, maxb, maxg, maxr, h_trapeze, cut_tr, cam_img_topic, cam_down_img_topic, x_forvard, minb_down, ming_down, minr_down, maxb_down, maxg_down, maxr_down, limit_r_channel
+    global view_result_flag, image_width_px, image_height_px, limit_f_channel, maxb, maxg, maxr, h_trapeze, cut_tr, cam_img_topic, cam_down_img_topic, x_forvard, minb_down, ming_down, minr_down, maxb_down, maxg_down, maxr_down, limit_d_channel
 
     cam_img_topic = rospy.get_param('~cam_img_topic', cam_img_topic)
     cam_down_img_topic = rospy.get_param('~cam_down_img_topic', cam_down_img_topic)
@@ -91,7 +91,7 @@ def get_params_server():
     maxg_down = rospy.get_param('~maxg_down', maxg_down)
     maxr_down = rospy.get_param('~maxr_down', maxr_down)
 
-    limit_r_channel = rospy.get_param('~limit_r_channel', limit_r_channel)
+    limit_d_channel = rospy.get_param('~limit_d_channel', limit_d_channel)
     limit_f_channel = rospy.get_param('~limit_f_channel', limit_f_channel)
 
     h_trapeze = rospy.get_param('~h_trapeze', h_trapeze)

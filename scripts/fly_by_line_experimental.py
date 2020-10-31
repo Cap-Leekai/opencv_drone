@@ -195,14 +195,14 @@ def main():
         binary_f = np.zeros_like(f_channel)
         # заносим соответствующие пиксели из r_channel, которые меньше 2 в массив binary_r со знаением 1
         binary_f[(f_channel < limit_f_channel)] = 255
-        cv.imshow("hh", binary_f)
 
         # Фильтруем
+        kernel_one = np.ones((5, 5), np.uint8)
         # Уменьшаем контуры белых объектов - делаем две итерации
-        # AllBinary = cv.erode(binary_f, None, iterations = 1)
-        # # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем 5 итераций
-        # AllBinary = cv.dilate(AllBinary, None, iterations = 1)
+        binary_f = cv.erode(binary_f, kernel_one, iterations=2)
+        binary_f = cv.dilate(binary_f, kernel_one, iterations=2)
 
+        cv.imshow("hh", binary_f)
         AllBinary_trapeze = binary_f.copy()
 
         # рисуем трапецию на AllBinary
@@ -215,6 +215,13 @@ def main():
 
         # преобразуем трапецию в полноценный кадр
         warped = cv.warpPerspective(binary_f, M, (image_size[1], image_size[0]), flags=cv.INTER_LINEAR)
+
+        # Фильтруем
+        kernel = np.ones((10, 10), np.uint8)
+        # Уменьшаем контуры белых объектов - делаем две итерации
+        warped = cv.erode(warped, kernel, iterations = 1)
+        # # Увеличиваем контуры белых объектов (Делаем противоположность функции erode) - делаем 5 итераций
+        # AllBinary = cv.dilate(AllBinary, None, iterations = 1)
 
         cv.imshow("warped", warped)
 
@@ -230,24 +237,24 @@ def main():
         if IndWhitesColumnU == 0:
             rospy.loginfo_throttle(5, "Line lost!")
             continue
-        #
-        #
-        #
-        #
-        #     allbinary_copy = warped.copy()
-        #
-        #     if view_result_flag:
-        #         # рисуем горизонталь
-        #         cv.line(allbinary_copy, (0, allbinary_copy.shape[0] // 2), (allbinary_copy.shape[1], allbinary_copy.shape[0] // 2), 200, 2)                 # рисуем статическую горизонталь
-        #         # рисуем линии смещения пути в кадре,
-        #         cv.line(allbinary_copy, (allbinary_copy.shape[1] // 2, allbinary_copy.shape[0]), (IndWhitesColumnU, 0), 180, 2)
-        #
-        #     if quaternion is not None:
-        #         (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
-        #     else:
-        #         continue
-        #
-        #     print "Курс: %s     Смещение курса: %s" %(yaw, yaw - math.atan2((IndWhitesColumnU - midpoint_x), cv_img.shape[0]))     # целевой курс в goal_pose -> yaw + math.atan2( -(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), 320)
+
+
+
+
+        allbinary_copy = warped.copy()
+
+        if view_result_flag:
+            # рисуем горизонталь
+            cv.line(allbinary_copy, (0, allbinary_copy.shape[0] // 2), (allbinary_copy.shape[1], allbinary_copy.shape[0] // 2), 200, 2)                 # рисуем статическую горизонталь
+            # рисуем линии смещения пути в кадре,
+            cv.line(allbinary_copy, (allbinary_copy.shape[1] // 2, allbinary_copy.shape[0]), (IndWhitesColumnU, 0), 180, 2)
+
+        if quaternion is not None:
+            (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(quaternion)
+        else:
+            continue
+
+        rospy.loginfo("Курс: %s     Смещение курса: %s" %(yaw, math.atan2((IndWhitesColumnU - midpoint_x), cv_img.shape[0])))     # целевой курс в goal_pose -> yaw + math.atan2( -(IndWhitesColumnR - midpoint_y) - (-(IndWhitesColumnL - midpoint_y)), 320)
         #
         #     print(math.atan2((IndWhitesColumnU - midpoint_x), allbinary_copy.shape[0] // 2))
         #     goal_pose.pose.course = yaw - math.atan2((IndWhitesColumnU - midpoint_x), cv_img.shape[0])
@@ -257,7 +264,7 @@ def main():
         #     if view_result_flag:
         #         cv.imshow("test1", warped)
         #         cv.imshow("test2", AllBinary_trapeze)
-        #         cv.imshow("test3", allbinary_copy)
+        cv.imshow("test3", allbinary_copy)
                 # cv.imshow("test4", allbinary_copy_down)
 
             # hz.sleep()
@@ -270,3 +277,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    cv.destroyAllWindows()
