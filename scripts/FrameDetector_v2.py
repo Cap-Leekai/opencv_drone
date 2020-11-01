@@ -14,7 +14,7 @@ from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped, Point
 from opencv_drone.msg import frame_detect
 from drone_msgs.msg import Goal                 	    #kill#
-import dynamic_reconfigure
+import dynamic_reconfigure.client
 
 drone_pose_topic = "/mavros/local_position/pose"        #kill#
 depth_image_topic = "/d400/depth/image_rect_raw"     	#/camera/aligned_depth_to_infra1/image_raw
