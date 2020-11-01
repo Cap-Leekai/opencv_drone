@@ -100,8 +100,8 @@ def depth_image_cb(data):
         image_binary = np.zeros_like(depth_frame)
         # делаем маску из допустимых пикселей на основе условия
 
-        image_binary[(depth_frame < 3000.0) & (depth_frame > 100.0)] = 255          #3000:100
-
+        image_binary[(depth_frame < 4500.0) & (depth_frame > 100.0)] = 255          #3000:100
+                                    
         # print 1
 
         image_binary = np.array(image_binary, dtype=np.uint8)
@@ -120,7 +120,8 @@ def depth_image_cb(data):
 
         opening = cv.morphologyEx(opening, cv.MORPH_CLOSE, kernel_second)
 
-        opening = cv.erode(opening, kernel_dilation, iterations=1)
+        kernel_erode = np.ones((12, 12), np.uint8)
+        opening = cv.erode(opening, kernel_erode, iterations=1)
 
     except:
         print ("Error read depth image")
@@ -284,9 +285,9 @@ def make_marker(point, id):
     marker.type = marker.SPHERE
     marker.action = marker.ADD
     marker.id = id
-    marker.scale.x = 0.5
-    marker.scale.y = 0.5
-    marker.scale.z = 0.5
+    marker.scale.x = 0.76
+    marker.scale.y = 0.76
+    marker.scale.z = 0.76
     marker.color.a = 1.0
     marker.color.r = 1.0
     marker.color.g = 1.0
@@ -392,7 +393,7 @@ def main():
 
                 if view_result_flag:
                     # cv.imshow("test", opening)
-                    cv.imshow("depth", depth_frame)
+                    cv.imshow("depth", opening)
 
             except:
                 continue
@@ -412,7 +413,7 @@ def main():
                 if len(list_cnt) == 0:
                     continue
 
-                print len(list_cnt)
+                # print len(list_cnt)
                 hull = cv.convexHull(list_cnt[0])
                 epsilon = 0.1 * cv.arcLength(hull, True)
                 approx = cv.approxPolyDP(hull, epsilon, True)
@@ -430,11 +431,17 @@ def main():
                     continue
                 ###
 
-                cv.drawContours(zeroes_mask, [approx], -1, 255, 1)
+                cv.drawContours(zeroes_mask, [approx], -1, 255, 3)
+                # zeroes_mask = cv.dilate(zeroes_mask, None, iterations=8)
+
+                # cv.imshow("Fuck", zeroes_mask)
+
                 # ищем хорошие точки для трекинга в углах рамки
                 corners = cv.goodFeaturesToTrack(zeroes_mask, 4, 0.4, 10)  # return [x:640, y:480]      #corners = cv.goodFeaturesToTrack(gray, 4, 0.01, 10)
-                corners = np.int0(corners)
-
+                try:
+                    corners = np.int0(corners)
+                except:
+                    rospy.loginfo("Huy znaet chto emu nugno")
                 if cv.contourArea(approx) > 30000.0 and corners is not None:
                     rospy.loginfo("Detect frame")
                     try:
@@ -471,9 +478,9 @@ def main():
                         dist = dist / 1000
 
                         # проверяем есть ли нули в массиве дистанций -> отсеиваем итерации с нулями
-                        if not 0.0 in dist and np.max(dist) < 3.0:
+                        if not 0.0 in dist and np.max(dist) < 4.0:
                         # if not math.isnan(dist.max()):
-                            print "DIST OK"
+                            rospy.loginfo("DIST OK")
                             rospy.loginfo(dist)
                             goal_ = calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height_of_drone, width_of_drone)
 
