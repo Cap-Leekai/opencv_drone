@@ -6,7 +6,7 @@ import numpy as np
 import rospy
 import math
 import tf
-
+import dynamic_reconfigure.client
 
 from visualization_msgs.msg import Marker
 from cv_bridge import CvBridge
@@ -14,7 +14,6 @@ from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped, Point
 from opencv_drone.msg import frame_detect
 from drone_msgs.msg import Goal                 	    #kill#
-import dynamic_reconfigure.client
 
 drone_pose_topic = "/mavros/local_position/pose"        #kill#
 depth_image_topic = "/d400/depth/image_rect_raw"     	#/camera/aligned_depth_to_infra1/image_raw
@@ -22,7 +21,7 @@ image_topic = "/d400/color/image_raw"
 drone_goal_pose = "/goal_pose"                          #kill#
 frame_detect_topic = "/frame_detector"
 
-view_result_flag = True
+view_result_flag = False
 debug_prints = False
 
 marker_publisher = None
@@ -332,8 +331,7 @@ def transform_cords_3D(X, Y, Z, roll, pitch, yaw, goal_, yaw_error):
 
 
 def trajectory_publisher(trajectory, yaw_error):
-    global goal_pose_pub, drone_pose, detect_frame_publisher, frame_detect_flag
-
+    global goal_pose_pub, drone_pose, detect_frame_publisher, frame_detect_flag, client
     flag_corrector_course = False
 
     while True:
@@ -368,24 +366,37 @@ def trajectory_publisher(trajectory, yaw_error):
         else:
             frame_detect_flag.detect_frame = False
             detect_frame_publisher.publish(frame_detect_flag)
+
+            use_unstable = True
+            client.update_configuration({"run": use_unstable})
             break
 
 
+def callback(config):
+    rospy.loginfo("Config set to {run}".format(**config))
+
+
 def main():
-    global old_time, last_area, goal_pose, goal_pose_pub, detect_frame_publisher
+    global old_time, last_area, goal_pose, goal_pose_pub, detect_frame_publisher, client
     rospy.init_node("Frame_detector_node")
 
-    hz = rospy.Rate(30)
+    hz = rospy.Rate(10)
 
     get_params_server()
 
     # init subscribers
     rospy.Subscriber(depth_image_topic, Image, depth_image_cb)
-    rospy.Subscriber(drone_pose_topic, PoseStamped, drone_pose_cb)  #kill#
+    rospy.Subscriber(drone_pose_topic, PoseStamped, drone_pose_cb)                                  #kill#
     # init publishers
-    goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size=10)       #Kill#
+    goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size=10)                           #Kill#
     detect_frame_publisher = rospy.Publisher(frame_detect_topic, frame_detect, queue_size=10)
     marker_publisher = rospy.Publisher('window_target_marker', Marker)
+
+    # rospy.wait_for_service("unstable_planner_node", timeout=1)
+    try:
+        client = dynamic_reconfigure.client.Client("unstable_planner_node", timeout=1, config_callback=callback)
+    except:
+        rospy.loginfo("unstable_planner_node is not run!")
 
     while not rospy.is_shutdown():
         if depth_frame is not None and image_binary is not None:
@@ -484,7 +495,7 @@ def main():
                         if not 0.0 in dist and np.max(dist) < 4.0:
                         # if not math.isnan(dist.max()):
                             rospy.loginfo("DIST OK")
-                            rospy.loginfo(dist)
+                            # rospy.loginfo(dist)
                             goal_ = calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height_of_drone, width_of_drone)
 
                             # print('x : ' + str(goal_.x0) + ', ' + 'y : ' + str(goal_.y0) + ', ' + 'z : ' + str(goal_.z0))
@@ -498,11 +509,16 @@ def main():
 
                             if goal_vect.y0 < 0.0:
                                 yaw_error = -yaw_error
+
                             # останавливаем полет по линии
                             frame_detect_flag.detect_frame = True
                             detect_frame_publisher.publish(frame_detect_flag)
+                            # выключаем анстейбл от греха подальше
+                            use_unstable = False
+                            client.update_configuration({"run": use_unstable})
 
                             try:
+                                # создаем желтые шарики-маркеры траектории в rviz
                                 point0 = Point(x=goal_.x0, y=goal_.y0, z=goal_.z0)
                                 point1 = Point(x=goal_.x1, y=goal_.y1, z=goal_.z1)
                                 point2 = Point(x=goal_.x1 + 1.5 * math.cos(yaw_error), y=goal_.y1 + 1.5 * math.sin(yaw_error), z=goal_.z1)
@@ -522,8 +538,8 @@ def main():
                             #################################
 
                             #******#
-                            # trajectory = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y,drone_pose.pose.position.z, 0.0, 0.0, yaw, goal_, yaw_error)
-                            # trajectory_publisher(trajectory, yaw_error)
+                            trajectory = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y, drone_pose.pose.position.z, 0.0, 0.0, yaw, goal_, yaw_error)
+                            trajectory_publisher(trajectory, yaw_error)
                             #******#
                         else:
                             rospy.loginfo("DIST IS NOT OK!")

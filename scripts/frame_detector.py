@@ -9,7 +9,7 @@ import os
 import tf
 import math
 import time
-# import dynamic_reconfigure
+import dynamic_reconfigure.client
 
 
 from visualization_msgs.msg import Marker
@@ -20,7 +20,7 @@ from std_msgs.msg import Float32
 from drone_msgs.msg import Goal
 from geometry_msgs.msg import PoseStamped, Quaternion, Point
 
-# client = dynamic_reconfigure.client
+client = dynamic_reconfigure.client
 
 depth_image_topic = "/camera/aligned_depth_to_infra1/image_raw"
 # image_topic = "/r200/image_raw"
