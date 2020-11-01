@@ -9,8 +9,7 @@ import os
 import tf
 import math
 import time
-import dynamic_reconfigure.client
-
+import dynamic_reconfigure
 
 from visualization_msgs.msg import Marker
 from cv_bridge import CvBridge, CvBridgeError
