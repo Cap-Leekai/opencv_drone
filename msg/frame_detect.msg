@@ -1,2 +1,2 @@
 bool detect_frame
-bool undetect_frame
+bool detect_line
