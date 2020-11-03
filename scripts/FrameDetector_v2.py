@@ -16,7 +16,7 @@ from opencv_drone.msg import frame_detect
 from drone_msgs.msg import Goal                 	    #kill#
 
 drone_pose_topic = "/mavros/local_position/pose"        #kill#
-depth_image_topic = "/d400/depth/image_rect_raw"     	#/camera/aligned_depth_to_infra1/image_raw
+depth_image_topic = "/r200/depth/image_raw"     	#/camera/aligned_depth_to_infra1/image_raw
 image_topic = "/d400/color/image_raw"
 drone_goal_pose = "/goal_pose"                          #kill#
 frame_detect_topic = "/frame_detector"
@@ -102,7 +102,7 @@ def depth_image_cb(data):
         image_binary = np.zeros_like(depth_frame)
         # делаем маску из допустимых пикселей на основе условия
 
-        image_binary[(depth_frame < 4500.0) & (depth_frame > 100.0)] = 255          #3000:100
+        image_binary[(depth_frame < 5.0) & (depth_frame > 1.0)] = 255          #4500.0:100
                                     
         # print 1
 
@@ -489,11 +489,11 @@ def main():
                                          depth_frame[corners[2][1]][corners[2][0]],
                                          depth_frame[corners[3][1]][corners[3][0]]])
                         # переводим дистанцию в метры
-                        dist = dist / 1000
+                        # dist = dist / 1000
 
                         # проверяем есть ли нули в массиве дистанций -> отсеиваем итерации с нулями
-                        if not 0.0 in dist and np.max(dist) < 4.0:
-                        # if not math.isnan(dist.max()):
+                        # if not 0.0 in dist and np.max(dist) < 4.0:
+                        if not math.isnan(dist.max()):
                             rospy.loginfo("DIST OK")
                             # rospy.loginfo(dist)
                             goal_ = calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height_of_drone, width_of_drone)
@@ -551,3 +551,4 @@ def main():
 
 if __name__ == "__main__":
         main()
+        cv.destroyAllWindows()

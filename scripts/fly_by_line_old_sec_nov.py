@@ -19,6 +19,7 @@ from opencv_drone.msg import frame_detect
 
 # инициализация топиков
 cam_img_topic = "/iris_rplidar/usb_cam/image_raw"                    # топик нижней камеры
+alt_topic = "/drone/alt"                                            # топик текущей высоты
 drone_pose_topic = "/mavros/local_position/pose"                    # топик текущей позиции
 drone_goal_pose = "/goal_pose"
 frame_detect_topic = "/frame_detector"
@@ -37,7 +38,6 @@ goal_vel.twist.linear.x = 1.0
 ros_img = None
 detect_frame_flag = False
 quaternion = None
-
 
 def detect_frame_cb(data):
     global detect_frame_flag
@@ -91,6 +91,7 @@ def main():
     # init subscribers
     rospy.Subscriber(cam_img_topic, Image, cam_img_cb)
     rospy.Subscriber(drone_pose_topic, PoseStamped, drone_pose_cb)
+    rospy.Subscriber(alt_topic, Float32, drone_alt_cb)
     rospy.Subscriber(frame_detect_topic, frame_detect, detect_frame_cb)
 
     # init publishers
@@ -110,6 +111,9 @@ def main():
         else:
             rospy.loginfo("Camera not read!")
             continue
+
+
+        # print 1
         # извлекаем КРАСНЫЙ канал из кадра видеопотока
         r_channel = cv_img[:, :, 2]
         # создаем массив размером как r_channel
@@ -198,7 +202,7 @@ def main():
 
             # находим координаты целевой точки в локальной системе координат
             correct_y = (sm_pix_y / pixel_on_meter)
-            correct_x = (sm_pix_x / pixel_on_meter) + 1.8
+            correct_x = (sm_pix_x / pixel_on_meter)
 
             # отображаем линию масштаба - теоретически линия на кадре показывает МЕТР
             cv.line(cv_img, (cv_img.shape[1], 0), (cv_img.shape[1], int(pixel_on_meter)), (255, 0, 255), 10)
@@ -211,7 +215,7 @@ def main():
             goal_pose.pose.point.y = y_glob
 
             # if drone_alt > 1.2:
-            goal_pose.pose.point.z = 2.0
+            goal_pose.pose.point.z = 1.5
             # elif drone_alt < 1.3:
             #     goal_pose.pose.point.z = 1.2
 

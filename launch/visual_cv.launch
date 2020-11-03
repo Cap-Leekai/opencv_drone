@@ -1,31 +1,37 @@
 <launch>
 
-
-<include file="$(find camera_calibrate_mono)/launch/mono_cam.launch">
-</include>
+<!--run down camera server-->
+<!--    <include file="$(find opencv_drone)/launch/mono_cam.launch">
+    </include>
+-->
 
 <!-- Run frame detector -->
+<node pkg="opencv_drone" type="FrameDetector_v3.py" name="frame_detector_node">
 
-<!--
-<node pkg="opencv_drone" type="FrameDetector_v2.py" name="frame_detector_node" respawn="true" output="screen">
-
-    <param name="depth_image_topic" value="/d400/depth/image_rect_raw"/>
+    <param name="depth_image_topic" value="/r200/depth/image_raw"/>
     
-    <param name="view_result_flag" value="false"/>
+    <param name="view_result_flag" value="true"/>
     
     <param name="image_width_px" value="1280"/>
     <param name="image_height_px" value="720"/>
 
 </node>
--->
+
+<!-- Run pillar detector -->
+
+<node pkg="opencv_drone" type="pillar_detector.py" name="pillar_detector_node">
+</node>
+
+<!-- LANDING AT LZ-->
+<node pkg="opencv_drone" type="land.py" name="landing_node">
+</node>
 
 <!-- Run fly by line -->
-<node pkg="opencv_drone" type="fly_by_line.py" name="fly_by_line" respawn="true" output="screen">
+<node pkg="opencv_drone" type="fly_by_line_old_sec_nov.py" name="fly_by_line" respawn="true">
 
-    <param name="cam_img_topic" value="/d400/color/image_raw"/>
-    <param name="cam_down_img_topic" value="/mono_cam_down/camera_mono/image_raw"/>
+    <param name="cam_img_topic" value="/r200/image_raw"/>
     
-    <param name="view_result_flag" value="false"/>
+    <param name="view_result_flag" value="true"/>
     
     <param name="image_width_px" value="1280"/>
     <param name="image_height_px" value="720"/>
@@ -38,17 +44,17 @@
     <param name="ming_down" value="0"/>
     <param name="minr_down" value="0"/>
     
-    <param name="maxb_down" value="146"/>
-    <param name="maxg_down" value="139"/>
-    <param name="maxr_down" value="105"/>
+    <param name="maxb_down" value="100"/>
+    <param name="maxg_down" value="70"/>
+    <param name="maxr_down" value="64"/>
     
-    <param name="limit_f_channel" value="100"/>
-    <param name="limit_d_channel" value="80"/>
+    <param name="limit_r_channel" value="40"/>
+
     
-    <param name="h_trapeze" value="100"/>
-    <param name="cut_tr" value="170"/>    
+    <param name="h_trapeze" value="50"/>
+    <param name="cut_tr" value="100"/>    
     
-    <param name="x_forvard" value="1.8"/>
+    <param name="x_forvard" value="0.0"/>
 </node>
 
 

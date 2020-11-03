@@ -349,8 +349,6 @@ def main():
             if landing_flag:
                 print("LANDING!")
 
-
-
                 corector_pose(point_land_green, do)
 
                 while not abs(goal_point.pose.point.x - drone_pose.pose.position.x) < 0.3 and not abs(goal_point.pose.point.y - drone_pose.pose.position.y) < 0.3:

@@ -6,7 +6,7 @@ import numpy as np
 import rospy
 import math
 import tf
-
+import dynamic_reconfigure.client
 
 from visualization_msgs.msg import Marker
 from cv_bridge import CvBridge
@@ -16,7 +16,7 @@ from opencv_drone.msg import frame_detect
 from drone_msgs.msg import Goal                 	    #kill#
 
 drone_pose_topic = "/mavros/local_position/pose"        #kill#
-depth_image_topic = "/d400/depth/image_rect_raw"     	#/camera/aligned_depth_to_infra1/image_raw
+depth_image_topic = "/r200/depth/image_raw"     	    #/camera/aligned_depth_to_infra1/image_raw
 image_topic = "/d400/color/image_raw"
 drone_goal_pose = "/goal_pose"                          #kill#
 frame_detect_topic = "/frame_detector"
@@ -41,6 +41,8 @@ image_height_px = 720
 
 goal_pose = Goal()
 frame_detect_flag = frame_detect()
+
+client = dynamic_reconfigure.client
 
 # классы для функции пролета в рамку
 class goal:
@@ -100,8 +102,8 @@ def depth_image_cb(data):
         image_binary = np.zeros_like(depth_frame)
         # делаем маску из допустимых пикселей на основе условия
 
-        image_binary[(depth_frame < 3000.0) & (depth_frame > 100.0)] = 255          #3000:100
-
+        image_binary[(depth_frame < 5.0) & (depth_frame > 1.0)] = 255          #4500.0:100.0
+                                    
         # print 1
 
         image_binary = np.array(image_binary, dtype=np.uint8)
@@ -120,21 +122,9 @@ def depth_image_cb(data):
 
         opening = cv.morphologyEx(opening, cv.MORPH_CLOSE, kernel_second)
 
-        opening = cv.erode(opening, kernel_dilation, iterations=1)
+        kernel_erode = np.ones((12, 12), np.uint8)
+        opening = cv.erode(opening, kernel_erode, iterations=1)
 
-
-
-        # for i in range(len(image_binary)):
-        #     print image_binary[i]
-        # cv.imshow("hhh", image_binary)
-        # делаем размытие картинки image_binary
-        # image_binary = cv.blur(image_binary, (15, 15))
-
-        # print("BEFORe",depth_frame[-1][-1])@
-        # depth_frame = valmap(depth_frame, 0, 10000, 0, 255)
-        # print("AFTER",depth_frame[-1][-1])
-
-        # depth_frame = np.uint8(depth_frame)
     except:
         print ("Error read depth image")
         image_binary = None
@@ -268,8 +258,6 @@ def calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height, widt
     ang = math.acos((mx * qx + my * qy + mz * qz) / (math.sqrt(math.pow(mx, 2) + math.pow(my, 2) + math.pow(mz, 2)) * math.sqrt(math.pow(qx, 2) + math.pow(qy, 2) + math.pow(qz, 2))))
     #print('ang : ' + str(ang))
 
-
-
     # Если ang больше 165 градусов, то летим к центру рамки, в противном случае летим в точку p
     goal_ = goal(0, 0, 0, 0, 0, 0)
 
@@ -295,13 +283,13 @@ def calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height, widt
 
 def make_marker(point, id):
     marker = Marker()
-    marker.header.frame_id = "/d400_link"
+    marker.header.frame_id = "/base_link"
     marker.type = marker.SPHERE
     marker.action = marker.ADD
     marker.id = id
-    marker.scale.x = 0.5
-    marker.scale.y = 0.5
-    marker.scale.z = 0.5
+    marker.scale.x = 0.76
+    marker.scale.y = 0.76
+    marker.scale.z = 0.76
     marker.color.a = 1.0
     marker.color.r = 1.0
     marker.color.g = 1.0
@@ -321,7 +309,7 @@ def transform_cords_3D(X, Y, Z, roll, pitch, yaw, goal_, yaw_error):
     local_cords_1 = np.array([goal_.x1, goal_.y1, goal_.z1])
     local_cords_2 = np.array([goal_.x1 + 1.5 * math.cos(yaw_error), goal_.y1 + 1.5 * math.sin(yaw_error), goal_.z1])
 
-    transpose_cord = local_cords_0.reshape(3, 1)
+    # transpose_cord = local_cords_0.reshape(3, 1)
     matrix_R = np.array([[math.cos(roll) * math.cos(yaw) - math.sin(roll) * math.cos(pitch) * math.sin(yaw), - math.cos(roll) * math.sin(yaw) - math.sin(roll) * math.cos(pitch) * math.cos(yaw), math.sin(roll) * math.sin(pitch)],
                          [math.sin(roll) * math.cos(yaw) + math.cos(roll) * math.cos(pitch) * math.sin(yaw), - math.sin(roll) * math.sin(yaw) + math.cos(roll) * math.cos(pitch) * math.cos(yaw), - math.cos(roll) * math.sin(pitch)],
                          [math.sin(pitch) * math.sin(yaw), math.sin(pitch) * math.cos(yaw), math.cos(pitch)]])
@@ -343,8 +331,7 @@ def transform_cords_3D(X, Y, Z, roll, pitch, yaw, goal_, yaw_error):
 
 
 def trajectory_publisher(trajectory, yaw_error):
-    global goal_pose_pub, drone_pose, detect_frame_publisher, frame_detect_flag
-
+    global goal_pose_pub, drone_pose, detect_frame_publisher, frame_detect_flag, client
     flag_corrector_course = False
 
     while True:
@@ -379,28 +366,37 @@ def trajectory_publisher(trajectory, yaw_error):
         else:
             frame_detect_flag.detect_frame = False
             detect_frame_publisher.publish(frame_detect_flag)
+
+            use_unstable = True
+            client.update_configuration({"run": use_unstable})
             break
 
 
+def callback(config):
+    rospy.loginfo("Config set to {run}".format(**config))
+
+
 def main():
-    global old_time, last_area, goal_pose, goal_pose_pub, detect_frame_publisher
+    global old_time, last_area, goal_pose, goal_pose_pub, detect_frame_publisher, client
     rospy.init_node("Frame_detector_node")
 
-    hz = rospy.Rate(30)
+    hz = rospy.Rate(10)
 
     get_params_server()
 
     # init subscribers
     rospy.Subscriber(depth_image_topic, Image, depth_image_cb)
-#    rospy.Subscriber(image_topic, Image, rgb_image_cb)
-    
-    rospy.Subscriber(drone_pose_topic, PoseStamped, drone_pose_cb)  #kill#
-    detect_frame_publisher = rospy.Publisher(frame_detect_topic, frame_detect, queue_size=10)
-
+    rospy.Subscriber(drone_pose_topic, PoseStamped, drone_pose_cb)                                  #kill#
     # init publishers
-    goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size=10)       #Kill#
-
+    goal_pose_pub = rospy.Publisher(drone_goal_pose, Goal, queue_size=10)                           #Kill#
+    detect_frame_publisher = rospy.Publisher(frame_detect_topic, frame_detect, queue_size=10)
     marker_publisher = rospy.Publisher('window_target_marker', Marker)
+
+    # rospy.wait_for_service("unstable_planner_node", timeout=1)
+    try:
+        client = dynamic_reconfigure.client.Client("unstable_planner_node", timeout=1, config_callback=callback)
+    except:
+        rospy.loginfo("unstable_planner_node is not run!")
 
     while not rospy.is_shutdown():
         if depth_frame is not None and image_binary is not None:
@@ -423,18 +419,15 @@ def main():
 
                 contours = sorted(contours, key=cv.contourArea, reverse=True)
                 # rospy.loginfo(len(contours))
-                
+                # фильтруем плохие контуры
                 list_cnt = []
-
                 for i in contours:
                     if cv.contourArea(i) > 30000.0 and cv.contourArea(i) < 100000.0:
                         list_cnt.append(i)
-
                 if len(list_cnt) == 0:
                     continue
 
-                # list_cnt = sorted(list_cnt, key=cv.contourArea, reverse=False)
-                print len(list_cnt)
+                # print len(list_cnt)
                 hull = cv.convexHull(list_cnt[0])
                 epsilon = 0.1 * cv.arcLength(hull, True)
                 approx = cv.approxPolyDP(hull, epsilon, True)
@@ -443,45 +436,42 @@ def main():
                 ###
                 # найдем производные от площади контура, чтобы понять есть ли резкий скочек площади, что будет означать, что контур детектируется недостаточно хорошо
                 dt = rospy.get_time() - old_time
+
+                #*#*#*#
+                if dt == 0.0:
+                    continue
+                #*#*#*#
                 old_time = rospy.get_time()
-                # print ("asd", (cv.contourArea(approx) - last_area))
-
-                # if dt == 0.0:
-                #     continue
-
                 Ft = ((cv.contourArea(approx) - last_area) / 1000) / dt
                 last_area = cv.contourArea(approx)
-
                 # rospy.loginfo("Ft: %s" %abs(Ft))
-
                 if Ft > 300.0:
                     rospy.loginfo("Area pick!")
                     continue
                 ###
 
-                # rospy.loginfo(cv.contourArea(approx))
-                cv.drawContours(zeroes_mask, [approx], -1, 255, 1)
+                cv.drawContours(zeroes_mask, [approx], -1, 255, 3)
+                # zeroes_mask = cv.dilate(zeroes_mask, None, iterations=8)
+
+                # cv.imshow("Fuck", zeroes_mask)
 
                 # ищем хорошие точки для трекинга в углах рамки
                 corners = cv.goodFeaturesToTrack(zeroes_mask, 4, 0.4, 10)  # return [x:640, y:480]      #corners = cv.goodFeaturesToTrack(gray, 4, 0.01, 10)
-                corners = np.int0(corners)
-
+                try:
+                    corners = np.int0(corners)
+                except:
+                    rospy.loginfo("Huy znaet chto emu nugno")
                 if cv.contourArea(approx) > 30000.0 and corners is not None:
                     rospy.loginfo("Detect frame")
-                    # window_detect_flag = True
-
                     try:
                         corners = corners.reshape(4, -1)
-                        # рисуем маркеры в найденых точках
-
                         image_binary_copy = image_binary.copy()
                         image_binary_copy = cv.cvtColor(image_binary_copy, cv.COLOR_GRAY2BGR)
-
+                        # рисуем маркеры в найденых точках
                         for i in corners:
                             cv.drawMarker(image_binary_copy, tuple(i), (0, 255, 0), markerType=cv.MARKER_TILTED_CROSS, thickness=2,
                                           markerSize=50)
-
-                        cv.drawContours(image_binary_copy, [approx],-1, (255, 0, 255), 3)
+                        cv.drawContours(image_binary_copy, [approx], -1, (255, 0, 255), 3)
 
                         if view_result_flag:
                             cv.imshow("Contour", image_binary_copy)
@@ -503,15 +493,14 @@ def main():
                                          depth_frame[corners[1][1]][corners[1][0]],
                                          depth_frame[corners[2][1]][corners[2][0]],
                                          depth_frame[corners[3][1]][corners[3][0]]])
+                        # переводим дистанцию в метры
+                        # dist = dist / 1000
 
-                        dist = dist / 1000
-
-                        # проверяем есть ли нули в массиве дистанций, отсеиваем итерации с нулями
-                        if not 0.0 in dist and np.max(dist) < 3.0:
-                        # if not math.isnan(dist.max()):
-
-                            print "DIST OK"
-                            rospy.loginfo(dist)
+                        # проверяем есть ли нули в массиве дистанций -> отсеиваем итерации с нулями
+                        # if not 0.0 in dist and np.max(dist) < 4.0:
+                        if not math.isnan(dist.max()):
+                            rospy.loginfo("DIST OK")
+                            # rospy.loginfo(dist)
                             goal_ = calculateGoalPointToFrame(size_x, size_y, pointsFrame, dist, l, height_of_drone, width_of_drone)
 
                             # print('x : ' + str(goal_.x0) + ', ' + 'y : ' + str(goal_.y0) + ', ' + 'z : ' + str(goal_.z0))
@@ -526,10 +515,15 @@ def main():
                             if goal_vect.y0 < 0.0:
                                 yaw_error = -yaw_error
 
+                            # останавливаем полет по линии
                             frame_detect_flag.detect_frame = True
                             detect_frame_publisher.publish(frame_detect_flag)
+                            # выключаем анстейбл от греха подальше
+                            use_unstable = False
+                            client.update_configuration({"run": use_unstable})
 
                             try:
+                                # создаем желтые шарики-маркеры траектории в rviz
                                 point0 = Point(x=goal_.x0, y=goal_.y0, z=goal_.z0)
                                 point1 = Point(x=goal_.x1, y=goal_.y1, z=goal_.z1)
                                 point2 = Point(x=goal_.x1 + 1.5 * math.cos(yaw_error), y=goal_.y1 + 1.5 * math.sin(yaw_error), z=goal_.z1)
@@ -550,25 +544,14 @@ def main():
                             #################################
 
                             #******#
-                            # trajectory = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y,drone_pose.pose.position.z, 0.0, 0.0, yaw, goal_, yaw_error)
-                            # trajectory_publisher(trajectory, yaw_error)
-
+                            trajectory = transform_cords_3D(drone_pose.pose.position.x, drone_pose.pose.position.y, drone_pose.pose.position.z, 0.0, 0.0, yaw, goal_, yaw_error)
+                            trajectory_publisher(trajectory, yaw_error)
                             #******#
                         else:
                             rospy.loginfo("DIST IS NOT OK!")
                     except:
                         continue
-
 		    hz.sleep()
-                # rect = cv.minAreaRect(contours[1])
-                # box = cv.boxPoints(rect)  # cv2.boxPoints(rect) for OpenCV 3.x
-                # box = np.int0(box)
-
-                # cv.drawContours(zeroes_mask, [box], 0, 255, 2)
-
-                # cv.drawContours(zeroes_mask, approx, -1, 255, 3)
-                # cv.imshow('zeroes_mask', zeroes_mask)
-
         if cv.waitKey(1) == 27:  # проверяем была ли нажата кнопка esc
             break
 
