@@ -7,8 +7,9 @@ import rospy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 import numpy as np
+
 # топики
-cam_topic = "/d400/color/image_raw"  #/mono_cam_down/camera_mono/image_raw"
+cam_topic = "/mono_cam_forward/camera_mono/image_raw"  #/mono_cam_down/camera_mono/image_raw"
 ros_img = Image()
 
 def img_cb(data):

@@ -314,7 +314,7 @@ def find_trajectory_for_pillar_avoidance(center_pillar,cur_pose,course,safe_dist
         circle_y=(pillar_diameter*0.5+safe_dist)*math.sin(math.pi*i/(step_curv))
         circle_coords.append([circle_x,circle_y])
         angle.append(-math.atan2(circle_coords[i][0],circle_coords[i][1]))
-    print("calculated coords local",circle_coords[0][0])
+    print("calculated coords local",circle_coords)
     course=course
 
     i=0
